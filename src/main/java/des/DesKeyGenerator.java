@@ -1,8 +1,14 @@
 package des;
 
+import java.security.SecureRandom;
+
 public class DesKeyGenerator {
+    private final SecureRandom secureRandom = new SecureRandom();
+
     public byte[] generateKey() {
-        throw new UnsupportedOperationException("DES key generation is not implemented in this skeleton.");
+        byte[] key = new byte[8];
+        secureRandom.nextBytes(key);
+        return key;
     }
 
     public long[] generateRoundKeys(byte[] key) {

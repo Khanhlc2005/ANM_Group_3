@@ -1,14 +1,20 @@
 package ui;
 
+import des.DesService;
+import des.EncodingFormat;
+import des.InputFormat;
+import file.FileService;
+
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.ButtonGroup;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
@@ -16,44 +22,74 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
+import java.io.File;
+import java.io.IOException;
 
 public class DesFrame extends JFrame {
     private static final String WORKSPACE_CARD = "workspace";
     private static final String KEY_INFO_CARD = "keyInfo";
+    private static final Color PAGE_BACKGROUND = new Color(246, 248, 251);
+    private static final Color PANEL_BACKGROUND = Color.WHITE;
+    private static final Color SIDEBAR_BACKGROUND = new Color(232, 237, 244);
+    private static final Color ERROR_COLOR = new Color(170, 35, 35);
+    private static final Color SUCCESS_COLOR = new Color(25, 105, 65);
 
+    private final DesService desService;
+    private final FileService fileService;
     private final CardLayout contentLayout = new CardLayout();
     private final JPanel contentPanel = new JPanel(contentLayout);
     private final JLabel statusLabel = new JLabel("Ready");
+    private final JTextField keyField = new JTextField();
+    private final JTextArea inputArea = new JTextArea();
+    private final JTextArea outputArea = new JTextArea();
+    private final JTextArea keyInfoArea = new JTextArea();
+    private final JComboBox<InputFormat> inputFormatCombo = new JComboBox<>(InputFormat.values());
+    private final JComboBox<EncodingFormat> outputFormatCombo = new JComboBox<>(EncodingFormat.values());
 
     public DesFrame() {
+        this(new DesService(), new FileService());
+    }
+
+    DesFrame(DesService desService, FileService fileService) {
         super("DES Studio");
+        this.desService = desService;
+        this.fileService = fileService;
+
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setMinimumSize(new Dimension(960, 640));
+        setMinimumSize(new Dimension(1080, 720));
         setLocationByPlatform(true);
         setLayout(new BorderLayout());
+        getContentPane().setBackground(PAGE_BACKGROUND);
 
         add(buildHeader(), BorderLayout.NORTH);
         add(buildBody(), BorderLayout.CENTER);
         add(buildStatusBar(), BorderLayout.SOUTH);
 
+        configureTextAreas();
         pack();
     }
 
     private JPanel buildHeader() {
         JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(PAGE_BACKGROUND);
         header.setBorder(BorderFactory.createEmptyBorder(16, 20, 12, 20));
 
         JLabel title = new JLabel("DES Studio");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 22f));
-        JLabel subtitle = new JLabel("Manual DES learning workspace");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 24f));
+        JLabel subtitle = new JLabel("Manual DES workspace");
+        subtitle.setForeground(new Color(80, 88, 100));
 
         JPanel text = new JPanel();
+        text.setOpaque(false);
         text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
         text.add(title);
         text.add(subtitle);
@@ -63,12 +99,13 @@ public class DesFrame extends JFrame {
     }
 
     private JSplitPane buildBody() {
+        contentPanel.setBackground(PAGE_BACKGROUND);
         contentPanel.add(buildWorkspacePanel(), WORKSPACE_CARD);
         contentPanel.add(buildKeyInfoPanel(), KEY_INFO_CARD);
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buildNavigationPanel(), contentPanel);
         splitPane.setResizeWeight(0);
-        splitPane.setDividerLocation(180);
+        splitPane.setDividerLocation(190);
         splitPane.setBorder(BorderFactory.createEmptyBorder());
         return splitPane;
     }
@@ -76,16 +113,18 @@ public class DesFrame extends JFrame {
     private JPanel buildNavigationPanel() {
         JPanel navigation = new JPanel();
         navigation.setLayout(new BoxLayout(navigation, BoxLayout.Y_AXIS));
-        navigation.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        navigation.setPreferredSize(new Dimension(180, 0));
+        navigation.setBackground(SIDEBAR_BACKGROUND);
+        navigation.setBorder(BorderFactory.createEmptyBorder(16, 12, 16, 12));
+        navigation.setPreferredSize(new Dimension(190, 0));
 
-        JButton workspaceButton = new JButton("Workspace");
-        JButton keyInfoButton = new JButton("Key Info");
-        workspaceButton.setHorizontalAlignment(SwingConstants.LEFT);
-        keyInfoButton.setHorizontalAlignment(SwingConstants.LEFT);
+        JButton workspaceButton = navigationButton("Workspace");
+        JButton keyInfoButton = navigationButton("Key Info");
 
         workspaceButton.addActionListener(event -> showCard(WORKSPACE_CARD, "Workspace"));
-        keyInfoButton.addActionListener(event -> showCard(KEY_INFO_CARD, "Key Info"));
+        keyInfoButton.addActionListener(event -> {
+            refreshKeyInfo();
+            showCard(KEY_INFO_CARD, "Key Info");
+        });
 
         navigation.add(workspaceButton);
         navigation.add(Box.createVerticalStrut(8));
@@ -94,113 +133,273 @@ public class DesFrame extends JFrame {
         return navigation;
     }
 
+    private JButton navigationButton(String text) {
+        JButton button = new JButton(text);
+        button.setHorizontalAlignment(SwingConstants.LEFT);
+        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        return button;
+    }
+
     private JPanel buildWorkspacePanel() {
         JPanel workspace = new JPanel(new GridBagLayout());
-        workspace.setBorder(BorderFactory.createEmptyBorder(12, 16, 16, 16));
+        workspace.setBackground(PAGE_BACKGROUND);
+        workspace.setBorder(BorderFactory.createEmptyBorder(0, 16, 16, 16));
 
-        JTextArea inputArea = new JTextArea(8, 32);
-        JTextArea outputArea = new JTextArea(8, 32);
-        outputArea.setEditable(false);
-
-        JTextField keyField = new JTextField();
-        JButton generateKeyButton = new JButton("Generate Key");
-        JButton saveKeyButton = new JButton("Save Key");
-        JButton encryptButton = new JButton("Encrypt");
-        JButton decryptButton = new JButton("Decrypt");
-        JButton loadFileButton = new JButton("Load File");
-        JButton saveFileButton = new JButton("Save File");
-
-        JRadioButton base64Option = new JRadioButton("Base64", true);
-        JRadioButton hexOption = new JRadioButton("Hex");
-        ButtonGroup encodingGroup = new ButtonGroup();
-        encodingGroup.add(base64Option);
-        encodingGroup.add(hexOption);
-
-        addSection(workspace, "Input", new JScrollPane(inputArea), 0);
-        addSection(workspace, "DES Key", buildKeyPanel(keyField, generateKeyButton, saveKeyButton), 1);
-        addSection(workspace, "Cipher Text Format", buildEncodingPanel(base64Option, hexOption), 2);
-        addSection(workspace, "Actions", buildActionPanel(encryptButton, decryptButton, loadFileButton, saveFileButton), 3);
-        addSection(workspace, "Result", new JScrollPane(outputArea), 4);
-
+        addWorkspacePanel(workspace, buildSecretKeyPanel(), 0, 0, 2, 0);
+        addWorkspacePanel(workspace, buildInputPanel(), 0, 1, 1, 1);
+        addWorkspacePanel(workspace, buildOutputPanel(), 1, 1, 1, 1);
+        addWorkspacePanel(workspace, buildActionPanel(), 0, 2, 2, 0);
         return workspace;
     }
 
-    private JPanel buildKeyInfoPanel() {
-        JPanel panel = new JPanel(new BorderLayout(12, 12));
-        panel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+    private JPanel buildSecretKeyPanel() {
+        JPanel panel = cardPanel("Secret Key");
+        panel.setLayout(new BorderLayout(8, 8));
 
-        JTextArea keyInfo = new JTextArea();
-        keyInfo.setEditable(false);
-        keyInfo.setText("""
-                DES key information will be shown here.
+        keyField.setToolTipText("16 hex characters, 8 bytes");
+        keyField.setFont(Font.decode(Font.MONOSPACED));
+        JButton generateButton = new JButton("Generate Random");
+        JButton clearButton = new JButton("Clear Data");
 
-                Planned fields:
-                - Raw key bytes
-                - Parity information
-                - Generated round keys
-                """);
-
-        panel.add(new JScrollPane(keyInfo), BorderLayout.CENTER);
-        return panel;
-    }
-
-    private JPanel buildKeyPanel(JTextField keyField, JButton generateKeyButton, JButton saveKeyButton) {
-        JPanel panel = new JPanel(new BorderLayout(8, 0));
-        panel.add(keyField, BorderLayout.CENTER);
+        generateButton.addActionListener(event -> safelyRun("Generate random key", () -> {
+            keyField.setText(desService.generateRandomKeyHex());
+            refreshKeyInfo();
+            showSuccess("Random DES key generated.");
+        }));
+        clearButton.addActionListener(event -> clearData());
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        buttons.add(generateKeyButton);
-        buttons.add(saveKeyButton);
+        buttons.setOpaque(false);
+        buttons.add(generateButton);
+        buttons.add(clearButton);
+
+        panel.add(keyField, BorderLayout.CENTER);
         panel.add(buttons, BorderLayout.EAST);
         return panel;
     }
 
-    private JPanel buildEncodingPanel(JRadioButton base64Option, JRadioButton hexOption) {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        panel.add(base64Option);
-        panel.add(hexOption);
+    private JPanel buildInputPanel() {
+        JPanel panel = cardPanel("Input");
+        panel.setLayout(new BorderLayout(8, 8));
+
+        JPanel topBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        topBar.setOpaque(false);
+        topBar.add(new JLabel("Format"));
+        topBar.add(inputFormatCombo);
+
+        JButton loadButton = new JButton("Load File");
+        loadButton.addActionListener(event -> loadInputFile());
+        topBar.add(loadButton);
+
+        panel.add(topBar, BorderLayout.NORTH);
+        panel.add(new JScrollPane(inputArea), BorderLayout.CENTER);
         return panel;
     }
 
-    private JPanel buildActionPanel(JButton encryptButton, JButton decryptButton, JButton loadFileButton, JButton saveFileButton) {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+    private JPanel buildOutputPanel() {
+        JPanel panel = cardPanel("Output");
+        panel.setLayout(new BorderLayout(8, 8));
+
+        outputArea.setEditable(false);
+        JPanel topBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        topBar.setOpaque(false);
+        topBar.add(new JLabel("Format"));
+        topBar.add(outputFormatCombo);
+
+        JButton copyButton = new JButton("Copy");
+        JButton saveButton = new JButton("Save File");
+        copyButton.addActionListener(event -> safelyRun("Copy output", this::copyOutput));
+        saveButton.addActionListener(event -> saveOutputFile());
+        topBar.add(copyButton);
+        topBar.add(saveButton);
+
+        panel.add(topBar, BorderLayout.NORTH);
+        panel.add(new JScrollPane(outputArea), BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel buildActionPanel() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        panel.setOpaque(false);
+
+        JButton encryptButton = new JButton("Encrypt");
+        JButton decryptButton = new JButton("Decrypt");
+        encryptButton.addActionListener(event -> encrypt());
+        decryptButton.addActionListener(event -> decrypt());
+
         panel.add(encryptButton);
         panel.add(decryptButton);
-        panel.add(loadFileButton);
-        panel.add(saveFileButton);
         return panel;
     }
 
-    private void addSection(JPanel target, String label, java.awt.Component component, int row) {
-        GridBagConstraints labelConstraints = new GridBagConstraints();
-        labelConstraints.gridx = 0;
-        labelConstraints.gridy = row;
-        labelConstraints.anchor = GridBagConstraints.NORTHWEST;
-        labelConstraints.insets = new Insets(0, 0, 12, 12);
+    private JPanel buildKeyInfoPanel() {
+        JPanel panel = new JPanel(new BorderLayout(12, 12));
+        panel.setBackground(PAGE_BACKGROUND);
+        panel.setBorder(BorderFactory.createEmptyBorder(0, 16, 16, 16));
 
-        JLabel sectionLabel = new JLabel(label);
-        sectionLabel.setFont(sectionLabel.getFont().deriveFont(Font.BOLD));
-        target.add(sectionLabel, labelConstraints);
+        JPanel card = cardPanel("Key Info");
+        card.setLayout(new BorderLayout());
+        keyInfoArea.setEditable(false);
+        keyInfoArea.setFont(Font.decode(Font.MONOSPACED));
+        keyInfoArea.setText("Generate or enter a valid key to inspect round keys.");
+        card.add(new JScrollPane(keyInfoArea), BorderLayout.CENTER);
+        panel.add(card, BorderLayout.CENTER);
+        return panel;
+    }
 
-        GridBagConstraints componentConstraints = new GridBagConstraints();
-        componentConstraints.gridx = 1;
-        componentConstraints.gridy = row;
-        componentConstraints.weightx = 1;
-        componentConstraints.weighty = label.equals("Input") || label.equals("Result") ? 1 : 0;
-        componentConstraints.fill = GridBagConstraints.BOTH;
-        componentConstraints.insets = new Insets(0, 0, 12, 0);
-        target.add(component, componentConstraints);
+    private JPanel cardPanel(String title) {
+        JPanel panel = new JPanel();
+        panel.setBackground(PANEL_BACKGROUND);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder(title),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)));
+        return panel;
+    }
+
+    private void addWorkspacePanel(JPanel target, JPanel panel, int x, int y, int width, double weightY) {
+        GridBagConstraints constraints = new GridBagConstraints();
+        constraints.gridx = x;
+        constraints.gridy = y;
+        constraints.gridwidth = width;
+        constraints.weightx = 1;
+        constraints.weighty = weightY;
+        constraints.fill = GridBagConstraints.BOTH;
+        constraints.insets = new Insets(0, 0, 12, x == 0 && width == 1 ? 12 : 0);
+        target.add(panel, constraints);
     }
 
     private JPanel buildStatusBar() {
         JPanel statusBar = new JPanel(new BorderLayout());
-        statusBar.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+        statusBar.setBackground(PAGE_BACKGROUND);
+        statusBar.setBorder(BorderFactory.createEmptyBorder(8, 16, 10, 16));
         statusBar.add(statusLabel, BorderLayout.WEST);
         return statusBar;
     }
 
+    private void configureTextAreas() {
+        inputArea.setLineWrap(true);
+        inputArea.setWrapStyleWord(true);
+        outputArea.setLineWrap(true);
+        outputArea.setWrapStyleWord(true);
+        keyInfoArea.setLineWrap(false);
+    }
+
+    private void encrypt() {
+        safelyRun("Encrypt", () -> {
+            String result = desService.encrypt(
+                    inputArea.getText(),
+                    (InputFormat) inputFormatCombo.getSelectedItem(),
+                    keyField.getText(),
+                    (EncodingFormat) outputFormatCombo.getSelectedItem());
+            outputArea.setText(result);
+            refreshKeyInfo();
+            showSuccess("Encryption complete.");
+        });
+    }
+
+    private void decrypt() {
+        safelyRun("Decrypt", () -> {
+            String result = desService.decrypt(
+                    inputArea.getText(),
+                    (InputFormat) inputFormatCombo.getSelectedItem(),
+                    keyField.getText(),
+                    (EncodingFormat) outputFormatCombo.getSelectedItem());
+            outputArea.setText(result);
+            refreshKeyInfo();
+            showSuccess("Decryption complete.");
+        });
+    }
+
+    private void loadInputFile() {
+        JFileChooser chooser = new JFileChooser();
+        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        File selectedFile = chooser.getSelectedFile();
+        safelyRun("Load file", () -> {
+            try {
+                inputArea.setText(fileService.readText(selectedFile.toPath()));
+                showSuccess("Loaded " + selectedFile.getName() + ".");
+            } catch (IOException exception) {
+                throw new IllegalArgumentException("Could not load file: " + exception.getMessage(), exception);
+            }
+        });
+    }
+
+    private void saveOutputFile() {
+        if (outputArea.getText().isBlank()) {
+            showError("Output is empty.");
+            return;
+        }
+        JFileChooser chooser = new JFileChooser();
+        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        File selectedFile = chooser.getSelectedFile();
+        safelyRun("Save file", () -> {
+            try {
+                fileService.writeText(selectedFile.toPath(), outputArea.getText());
+                showSuccess("Saved " + selectedFile.getName() + ".");
+            } catch (IOException exception) {
+                throw new IllegalArgumentException("Could not save file: " + exception.getMessage(), exception);
+            }
+        });
+    }
+
+    private void copyOutput() {
+        if (outputArea.getText().isBlank()) {
+            showError("Output is empty.");
+            return;
+        }
+        Toolkit.getDefaultToolkit()
+                .getSystemClipboard()
+                .setContents(new StringSelection(outputArea.getText()), null);
+        showSuccess("Output copied.");
+    }
+
+    private void clearData() {
+        inputArea.setText("");
+        outputArea.setText("");
+        statusLabel.setForeground(Color.DARK_GRAY);
+        statusLabel.setText("Data cleared.");
+    }
+
+    private void refreshKeyInfo() {
+        String key = keyField.getText();
+        if (key == null || key.isBlank()) {
+            keyInfoArea.setText("Generate or enter a valid key to inspect round keys.");
+            return;
+        }
+        try {
+            keyInfoArea.setText(desService.describeKey(key));
+            keyInfoArea.setCaretPosition(0);
+        } catch (IllegalArgumentException exception) {
+            keyInfoArea.setText("Invalid key: " + exception.getMessage());
+        }
+    }
+
     private void showCard(String cardName, String label) {
         contentLayout.show(contentPanel, cardName);
+        statusLabel.setForeground(Color.DARK_GRAY);
         statusLabel.setText(label);
+    }
+
+    private void safelyRun(String actionName, Runnable action) {
+        try {
+            action.run();
+        } catch (RuntimeException exception) {
+            showError(actionName + " failed: " + exception.getMessage());
+        }
+    }
+
+    private void showSuccess(String message) {
+        statusLabel.setForeground(SUCCESS_COLOR);
+        statusLabel.setText(message);
+    }
+
+    private void showError(String message) {
+        statusLabel.setForeground(ERROR_COLOR);
+        statusLabel.setText(message);
+        JOptionPane.showMessageDialog(this, message, "DES Studio", JOptionPane.ERROR_MESSAGE);
     }
 }
