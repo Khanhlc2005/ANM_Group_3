@@ -33,6 +33,7 @@ public final class EncodingUtils {
         }
 
         return switch (format) {
+            case TEXT -> utf8String(bytes);
             case BASE64 -> encodeBase64(bytes);
             case HEX -> encodeHex(bytes);
         };
@@ -47,6 +48,7 @@ public final class EncodingUtils {
         }
 
         return switch (format) {
+            case TEXT -> utf8Bytes(encodedText);
             case BASE64 -> decodeBase64(encodedText);
             case HEX -> decodeHex(encodedText);
         };

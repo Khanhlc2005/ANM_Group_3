@@ -18,6 +18,9 @@ public class DesService {
     }
 
     public String encrypt(String input, InputFormat inputFormat, String hexKey, EncodingFormat outputFormat) {
+        if (outputFormat == EncodingFormat.TEXT) {
+            throw new IllegalArgumentException("Encrypted output must use Base64 or Hex.");
+        }
         byte[] key = EncodingUtils.decodeDesKeyHex(normalizeKey(hexKey));
         byte[] plainBytes = decodeInput(input, inputFormat);
         byte[] cipherBytes = algorithm.encrypt(plainBytes, key);

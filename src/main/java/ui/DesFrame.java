@@ -286,6 +286,7 @@ public class DesFrame extends JFrame {
     }
 
     private void configureTextAreas() {
+        outputFormatCombo.setSelectedItem(EncodingFormat.BASE64);
         inputArea.setLineWrap(true);
         inputArea.setWrapStyleWord(true);
         outputArea.setLineWrap(true);

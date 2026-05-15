@@ -28,6 +28,16 @@ class EncodingUtilsTest {
     }
 
     @Test
+    void encodesAndDecodesText() {
+        byte[] bytes = EncodingUtils.utf8Bytes("Hello DES");
+
+        String encoded = EncodingUtils.encode(bytes, EncodingFormat.TEXT);
+
+        assertEquals("Hello DES", encoded);
+        assertArrayEquals(bytes, EncodingUtils.decode(encoded, EncodingFormat.TEXT));
+    }
+
+    @Test
     void validatesDesKeyHexLengthAndCharacters() {
         assertArrayEquals(BitUtils.hexToBytes("133457799BBCDFF1"),
                 EncodingUtils.decodeDesKeyHex("133457799BBCDFF1"));
