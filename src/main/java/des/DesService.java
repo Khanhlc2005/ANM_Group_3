@@ -17,6 +17,7 @@ public class DesService {
         return EncodingUtils.encodeHex(keyGenerator.generateKey());
     }
 
+    // Chuẩn hóa dữ liệu từ giao diện, mã hóa DES và xuất ra Hex hoặc Base64.
     public String encrypt(String input, InputFormat inputFormat, String hexKey, EncodingFormat outputFormat) {
         byte[] key = EncodingUtils.decodeDesKeyHex(normalizeKey(hexKey));
         byte[] plainBytes = decodeInput(input, inputFormat);
@@ -24,6 +25,7 @@ public class DesService {
         return EncodingUtils.encode(cipherBytes, outputFormat);
     }
 
+    // Chuẩn hóa bản mã từ giao diện, giải mã DES và xuất byte rõ theo định dạng đã chọn.
     public String decrypt(String input, InputFormat inputFormat, String hexKey, EncodingFormat outputFormat) {
         byte[] key = EncodingUtils.decodeDesKeyHex(normalizeKey(hexKey));
         byte[] cipherBytes = decodeInput(input, inputFormat);
@@ -31,6 +33,7 @@ public class DesService {
         return EncodingUtils.encode(plainBytes, outputFormat);
     }
 
+    // Tạo mô tả lịch sinh khóa để kiểm tra PC-1, C/D và 16 khóa vòng DES.
     public String describeKey(String hexKey) {
         byte[] key = EncodingUtils.decodeDesKeyHex(normalizeKey(hexKey));
         KeyScheduleInfo schedule = keyGenerator.generateKeySchedule(key);

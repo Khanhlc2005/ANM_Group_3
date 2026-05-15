@@ -109,17 +109,17 @@ public class DesFrame extends JFrame {
         JLabel title = new JLabel("DES Studio");
         title.setFont(title.getFont().deriveFont(Font.BOLD, 24f));
 
-        JLabel subtitle = new JLabel("Precision Security");
+        JLabel subtitle = new JLabel("Bảo mật chính xác");
         subtitle.setForeground(TEXT_MUTED);
         subtitle.setBorder(BorderFactory.createEmptyBorder(2, 0, 26, 0));
 
-        JButton workspaceButton = navigationButton("Workspace");
-        JButton keyInfoButton = navigationButton("Key Info");
+        JButton workspaceButton = navigationButton("Mã hóa/Giải mã");
+        JButton keyInfoButton = navigationButton("Thông tin khóa");
 
-        workspaceButton.addActionListener(event -> showCard(WORKSPACE_CARD, "Workspace"));
+        workspaceButton.addActionListener(event -> showCard(WORKSPACE_CARD, "Mã hóa/Giải mã"));
         keyInfoButton.addActionListener(event -> {
             refreshKeyInfo();
-            showCard(KEY_INFO_CARD, "Key Info");
+            showCard(KEY_INFO_CARD, "Thông tin khóa");
         });
 
         navigation.add(title);
@@ -153,16 +153,16 @@ public class DesFrame extends JFrame {
     }
 
     private JPanel buildSecretKeyPanel() {
-        JPanel panel = cardPanel("Secret Key");
+        JPanel panel = cardPanel("Khóa bí mật");
         panel.setLayout(new BorderLayout(10, 10));
 
         keyField.setToolTipText("16 ký tự Hex, tương đương 8 byte");
         keyField.setFont(Font.decode(Font.MONOSPACED));
 
-        JButton generateButton = neutralButton("Generate Random");
-        JButton loadKeyButton = neutralButton("Load Key");
-        JButton saveKeyButton = neutralButton("Save Key");
-        JButton clearButton = neutralButton("Clear Data");
+        JButton generateButton = neutralButton("Tạo ngẫu nhiên");
+        JButton loadKeyButton = neutralButton("Tải khóa");
+        JButton saveKeyButton = neutralButton("Lưu khóa");
+        JButton clearButton = neutralButton("Xóa dữ liệu");
 
         generateButton.addActionListener(event -> generateRandomKey());
         loadKeyButton.addActionListener(event -> loadKeyFile());
@@ -182,15 +182,15 @@ public class DesFrame extends JFrame {
     }
 
     private JPanel buildInputPanel() {
-        JPanel panel = cardPanel("Input");
+        JPanel panel = cardPanel("Dữ liệu vào");
         panel.setLayout(new BorderLayout(10, 10));
 
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         topBar.setOpaque(false);
-        topBar.add(new JLabel("Format"));
+        topBar.add(new JLabel("Định dạng"));
         topBar.add(inputFormatCombo);
 
-        JButton loadButton = neutralButton("Load File");
+        JButton loadButton = neutralButton("Tải file");
         loadButton.addActionListener(event -> loadInputFile());
         topBar.add(loadButton);
 
@@ -204,8 +204,8 @@ public class DesFrame extends JFrame {
         panel.setOpaque(false);
         panel.setPreferredSize(new Dimension(150, 0));
 
-        JButton encryptButton = primaryButton("Encrypt");
-        JButton decryptButton = outlineButton("Decrypt");
+        JButton encryptButton = primaryButton("Mã hóa");
+        JButton decryptButton = outlineButton("Giải mã");
         encryptButton.addActionListener(event -> encrypt());
         decryptButton.addActionListener(event -> decrypt());
 
@@ -223,17 +223,17 @@ public class DesFrame extends JFrame {
     }
 
     private JPanel buildOutputPanel() {
-        JPanel panel = cardPanel("Output");
+        JPanel panel = cardPanel("Kết quả");
         panel.setLayout(new BorderLayout(10, 10));
 
         outputArea.setEditable(false);
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         topBar.setOpaque(false);
-        topBar.add(new JLabel("Format"));
+        topBar.add(new JLabel("Định dạng"));
         topBar.add(outputFormatCombo);
 
-        JButton copyButton = neutralButton("Copy");
-        JButton saveButton = neutralButton("Save File");
+        JButton copyButton = neutralButton("Sao chép");
+        JButton saveButton = neutralButton("Lưu file");
         copyButton.addActionListener(event -> copyOutput());
         saveButton.addActionListener(event -> saveOutputFile());
         topBar.add(copyButton);
@@ -249,7 +249,7 @@ public class DesFrame extends JFrame {
         panel.setBackground(PAGE_BACKGROUND);
         panel.setBorder(BorderFactory.createEmptyBorder(24, 24, 16, 24));
 
-        JPanel card = cardPanel("Key Info");
+        JPanel card = cardPanel("Thông tin khóa");
         card.setLayout(new BorderLayout(10, 10));
         keyInfoArea.setEditable(false);
         keyInfoArea.setFont(Font.decode(Font.MONOSPACED));
@@ -466,7 +466,7 @@ public class DesFrame extends JFrame {
 
     private void saveOutputFile() {
         if (outputArea.getText() == null || outputArea.getText().isBlank()) {
-            showError("Output đang rỗng, không có dữ liệu để lưu.");
+            showError("Kết quả đang rỗng, không có dữ liệu để lưu.");
             return;
         }
 
@@ -488,7 +488,7 @@ public class DesFrame extends JFrame {
 
     private void loadKeyFile() {
         JFileChooser chooser = new JFileChooser();
-        chooser.setFileFilter(new FileNameExtensionFilter("Key files (*.key, *.txt)", "key", "txt"));
+        chooser.setFileFilter(new FileNameExtensionFilter("File khóa (*.key, *.txt)", "key", "txt"));
         int choice = chooser.showOpenDialog(this);
         if (choice != JFileChooser.APPROVE_OPTION) {
             return;
@@ -512,7 +512,7 @@ public class DesFrame extends JFrame {
         }
 
         JFileChooser chooser = new JFileChooser();
-        chooser.setFileFilter(new FileNameExtensionFilter("Key files (*.key, *.txt)", "key", "txt"));
+        chooser.setFileFilter(new FileNameExtensionFilter("File khóa (*.key, *.txt)", "key", "txt"));
         int choice = chooser.showSaveDialog(this);
         if (choice != JFileChooser.APPROVE_OPTION) {
             return;
@@ -529,7 +529,7 @@ public class DesFrame extends JFrame {
 
     private void copyOutput() {
         if (outputArea.getText() == null || outputArea.getText().isBlank()) {
-            showError("Output đang rỗng, không có dữ liệu để copy.");
+            showError("Kết quả đang rỗng, không có dữ liệu để sao chép.");
             return;
         }
 
@@ -537,16 +537,16 @@ public class DesFrame extends JFrame {
             Toolkit.getDefaultToolkit()
                     .getSystemClipboard()
                     .setContents(new StringSelection(outputArea.getText()), null);
-            showSuccess("Đã copy output.");
+            showSuccess("Đã sao chép kết quả.");
         } catch (RuntimeException exception) {
-            showError("Không thể copy output.", exception);
+            showError("Không thể sao chép kết quả.", exception);
         }
     }
 
     private void clearData() {
         inputArea.setText("");
         outputArea.setText("");
-        showStatus("Đã xóa dữ liệu input và output.");
+        showStatus("Đã xóa dữ liệu vào và kết quả.");
     }
 
     private void refreshKeyInfo() {
@@ -559,23 +559,23 @@ public class DesFrame extends JFrame {
         StringBuilder builder = new StringBuilder();
         builder.append("Khóa hiện tại: ").append(key.isBlank() ? "(chưa nhập)" : key).append(System.lineSeparator());
         builder.append("Độ dài khóa: ").append(key.length()).append("/16 ký tự Hex").append(System.lineSeparator());
-        builder.append("Format: Hex").append(System.lineSeparator());
+        builder.append("Định dạng: Hex").append(System.lineSeparator());
 
         if (key.isBlank()) {
             builder.append("Trạng thái hợp lệ: Chưa có khóa").append(System.lineSeparator());
-            builder.append("Binary preview: -").append(System.lineSeparator());
+            builder.append("Xem trước nhị phân: -").append(System.lineSeparator());
         } else if (key.length() == 16 && isHex(key)) {
             byte[] keyBytes = EncodingUtils.decodeDesKeyHex(key);
             builder.append("Trạng thái hợp lệ: Hợp lệ").append(System.lineSeparator());
-            builder.append("Binary preview: ").append(binaryPreview(keyBytes)).append(System.lineSeparator());
+            builder.append("Xem trước nhị phân: ").append(binaryPreview(keyBytes)).append(System.lineSeparator());
         } else {
             builder.append("Trạng thái hợp lệ: Không hợp lệ").append(System.lineSeparator());
-            builder.append("Binary preview: -").append(System.lineSeparator());
+            builder.append("Xem trước nhị phân: -").append(System.lineSeparator());
         }
 
-        builder.append("Block size: 64-bit").append(System.lineSeparator());
-        builder.append("Effective key size: 56-bit").append(System.lineSeparator());
-        builder.append("Rounds: 16").append(System.lineSeparator());
+        builder.append("Kích thước khối: 64 bit").append(System.lineSeparator());
+        builder.append("Độ dài khóa hiệu dụng: 56 bit").append(System.lineSeparator());
+        builder.append("Số vòng: 16").append(System.lineSeparator());
         return builder.toString();
     }
 
@@ -595,13 +595,13 @@ public class DesFrame extends JFrame {
 
     private FileNameExtensionFilter loadFileFilter() {
         return new FileNameExtensionFilter(
-                "Supported files (*.txt, *.csv, *.json, *.xml, *.docx, *.pdf)",
+                "File được hỗ trợ (*.txt, *.csv, *.json, *.xml, *.docx, *.pdf)",
                 fileService.supportedLoadExtensions());
     }
 
     private FileNameExtensionFilter saveFileFilter() {
         return new FileNameExtensionFilter(
-                "Text files (*.txt, *.csv, *.json, *.xml)",
+                "File văn bản (*.txt, *.csv, *.json, *.xml)",
                 fileService.supportedSaveExtensions());
     }
 

@@ -38,6 +38,7 @@ public final class EncodingUtils {
         };
     }
 
+    // Giải mã chuỗi Hex/Base64 thành byte để đưa vào thuật toán DES.
     public static byte[] decode(String encodedText, EncodingFormat format) {
         if (encodedText == null || encodedText.isBlank()) {
             throw new IllegalArgumentException("Encoded text must not be blank.");
@@ -86,6 +87,7 @@ public final class EncodingUtils {
         }
     }
 
+    // Chuyển khóa DES từ 16 ký tự Hex thành đúng 8 byte.
     public static byte[] decodeDesKeyHex(String hexKey) {
         validateHex(hexKey, "DES key");
         if (hexKey.length() != 16) {

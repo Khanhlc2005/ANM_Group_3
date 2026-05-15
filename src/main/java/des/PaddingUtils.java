@@ -13,6 +13,7 @@ public final class PaddingUtils {
             throw new IllegalArgumentException("Input must not be null.");
         }
 
+        // DES dùng khối 8 byte, nên luôn thêm ít nhất một byte padding PKCS#5.
         int paddingLength = DES_BLOCK_SIZE - (input.length % DES_BLOCK_SIZE);
         if (paddingLength == 0) {
             paddingLength = DES_BLOCK_SIZE;
@@ -31,6 +32,7 @@ public final class PaddingUtils {
             throw new IllegalArgumentException("Padded input length must be a non-empty multiple of 8 bytes.");
         }
 
+        // Byte cuối cho biết số byte padding cần kiểm tra và loại bỏ.
         int paddingLength = paddedInput[paddedInput.length - 1] & 0xff;
         if (paddingLength < 1 || paddingLength > DES_BLOCK_SIZE) {
             throw new IllegalArgumentException("Invalid PKCS#5 padding length.");

@@ -1,13 +1,13 @@
 # DES Studio
 
-DES Studio is a Java Swing desktop app for a course project about manual DES encryption and decryption. The app lets you enter plaintext or ciphertext, generate or enter a DES key, encrypt/decrypt data, inspect the DES key schedule, load input from text files, save output, save/load keys, and copy results.
+DES Studio là ứng dụng desktop Java Swing dùng cho đồ án môn học về mã hóa và giải mã DES thủ công. Ứng dụng cho phép nhập bản rõ hoặc bản mã, tạo hoặc nhập khóa DES, mã hóa/giải mã dữ liệu, xem thông tin khóa, tải dữ liệu từ file văn bản, lưu kết quả, lưu/tải khóa và sao chép kết quả.
 
-## Requirements
+## Yêu cầu
 
-- JDK 21 or newer
-- Maven 3.9 or newer
+- JDK 21 hoặc mới hơn
+- Maven 3.9 hoặc mới hơn
 
-If `mvn` is not on `PATH`, either add Maven to `PATH` or use the Maven bundled with IntelliJ IDEA from `plugins/maven/lib/maven3/bin`.
+Nếu `mvn` chưa có trong `PATH`, hãy thêm Maven vào `PATH` hoặc dùng Maven đi kèm IntelliJ IDEA tại `plugins/maven/lib/maven3/bin`.
 
 ## Build
 
@@ -15,34 +15,34 @@ If `mvn` is not on `PATH`, either add Maven to `PATH` or use the Maven bundled w
 mvn clean package
 ```
 
-## Test
+## Kiểm thử
 
 ```powershell
 mvn test
 ```
 
-## Run
+## Chạy ứng dụng
 
 ```powershell
 mvn exec:java
 ```
 
-The Maven run command starts `app.Main`, configures FlatLaf, and opens the main Swing window.
+Lệnh chạy bằng Maven sẽ khởi động `app.Main`, cấu hình FlatLaf và mở cửa sổ Swing chính.
 
-## Demo Flow
+## Luồng demo
 
-1. Click `Generate Random` or enter a 16-character hex DES key manually.
-2. Enter plaintext in the `Input` area and select `TEXT`.
-3. Select `BASE64` or `HEX` as the output format for encryption.
-4. Click `Encrypt`.
-5. Copy the output, paste it back into `Input`, choose the matching input format, choose `HEX` or `BASE64` output, and click `Decrypt`.
-6. Use `Load File` to read `.txt`, `.csv`, `.json`, `.xml`, `.docx`, or text-based `.pdf` files into the input area. Use `Save File` to write output.
-7. Use `Save Key` and `Load Key` for key files.
-8. Open `Key Info` to inspect PC-1, C0/D0, shifts, and all 16 DES round keys.
+1. Bấm `Tạo ngẫu nhiên` hoặc nhập thủ công khóa DES Hex gồm 16 ký tự.
+2. Nhập bản rõ vào vùng `Dữ liệu vào` và chọn `Văn bản`.
+3. Chọn `Base64` hoặc `Hex` làm định dạng kết quả khi mã hóa.
+4. Bấm `Mã hóa`.
+5. Sao chép kết quả, dán lại vào `Dữ liệu vào`, chọn đúng định dạng dữ liệu vào, chọn định dạng kết quả `Hex` hoặc `Base64`, rồi bấm `Giải mã`.
+6. Dùng `Tải file` để đọc các file `.txt`, `.csv`, `.json`, `.xml`, `.docx` hoặc file `.pdf` dạng văn bản vào vùng dữ liệu vào. Dùng `Lưu file` để ghi kết quả.
+7. Dùng `Lưu khóa` và `Tải khóa` cho file khóa.
+8. Mở `Thông tin khóa` để xem khóa hiện tại, độ dài khóa, trạng thái hợp lệ, kích thước khối, độ dài khóa hiệu dụng và số vòng DES.
 
-## Notes
+## Ghi chú
 
-- DES is implemented manually in `src/main/java/des`; the main code does not use Java crypto APIs such as `javax.crypto.Cipher`.
-- Text files are read and written as UTF-8.
-- DOCX/PDF loading extracts text only. Scanned PDFs need OCR and are not supported.
-- The app is intended for DES demonstration and learning, not production cryptography.
+- DES được cài đặt thủ công trong `src/main/java/des`; mã chính không dùng API mã hóa của Java như `javax.crypto.Cipher`.
+- File văn bản được đọc và ghi bằng UTF-8.
+- Việc tải DOCX/PDF chỉ trích xuất phần văn bản. PDF scan cần OCR nên chưa được hỗ trợ.
+- Ứng dụng phục vụ mục đích minh họa và học DES, không dùng cho mã hóa trong môi trường sản xuất.
