@@ -39,14 +39,12 @@ public class DesAlgorithm {
     }
 
     public String encryptText(String plainText, String hexKey, EncodingFormat format) {
-        validateCipherTextEncoding(format);
         byte[] key = EncodingUtils.decodeDesKeyHex(hexKey);
         byte[] cipherText = encrypt(EncodingUtils.utf8Bytes(plainText), key);
         return EncodingUtils.encode(cipherText, format);
     }
 
     public String decryptText(String encodedCipherText, String hexKey, EncodingFormat format) {
-        validateCipherTextEncoding(format);
         byte[] key = EncodingUtils.decodeDesKeyHex(hexKey);
         byte[] cipherText = EncodingUtils.decode(encodedCipherText, format);
         validateCipherBytes(cipherText);
@@ -96,12 +94,6 @@ public class DesAlgorithm {
         }
         if (cipherText.length == 0 || cipherText.length % PaddingUtils.DES_BLOCK_SIZE != 0) {
             throw new IllegalArgumentException("Ciphertext length must be a non-empty multiple of 8 bytes.");
-        }
-    }
-
-    private void validateCipherTextEncoding(EncodingFormat format) {
-        if (format == EncodingFormat.TEXT) {
-            throw new IllegalArgumentException("Ciphertext must use Base64 or Hex encoding.");
         }
     }
 

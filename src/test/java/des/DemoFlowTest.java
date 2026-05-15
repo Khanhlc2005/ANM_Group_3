@@ -14,10 +14,10 @@ class DemoFlowTest {
         String plainText = "DES Studio demo text";
 
         String cipherText = service.encrypt(plainText, InputFormat.TEXT, key, EncodingFormat.BASE64);
-        String decryptedText = service.decrypt(cipherText, InputFormat.BASE64, key, EncodingFormat.TEXT);
+        String decryptedHex = service.decrypt(cipherText, InputFormat.BASE64, key, EncodingFormat.HEX);
 
         assertFalse(cipherText.isBlank());
-        assertEquals(plainText, decryptedText);
+        assertEquals(EncodingUtils.encodeHex(EncodingUtils.utf8Bytes(plainText)), decryptedHex);
         assertDoesNotThrow(() -> service.describeKey(key));
     }
 
@@ -28,9 +28,9 @@ class DemoFlowTest {
         String plainHex = "48656C6C6F20444553";
 
         String cipherHex = service.encrypt(plainHex, InputFormat.HEX, key, EncodingFormat.HEX);
-        String decryptedText = service.decrypt(cipherHex, InputFormat.HEX, key, EncodingFormat.TEXT);
+        String decryptedBase64 = service.decrypt(cipherHex, InputFormat.HEX, key, EncodingFormat.BASE64);
 
         assertFalse(cipherHex.isBlank());
-        assertEquals("Hello DES", decryptedText);
+        assertEquals(EncodingUtils.encodeBase64(EncodingUtils.decodeHex(plainHex)), decryptedBase64);
     }
 }

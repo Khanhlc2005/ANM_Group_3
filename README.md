@@ -35,7 +35,7 @@ The Maven run command starts `app.Main`, configures FlatLaf, and opens the main 
 2. Enter plaintext in the `Input` area and select `TEXT`.
 3. Select `BASE64` or `HEX` as the output format for encryption.
 4. Click `Encrypt`.
-5. Copy the output, paste it back into `Input`, choose the matching input format, select `TEXT` output, and click `Decrypt`.
+5. Copy the output, paste it back into `Input`, choose the matching input format, choose `HEX` or `BASE64` output, and click `Decrypt`.
 6. Use `Load File` to read text into the input area and `Save File` to write output.
 7. Use `Save Key` and `Load Key` for key files.
 8. Open `Key Info` to inspect PC-1, C0/D0, shifts, and all 16 DES round keys.

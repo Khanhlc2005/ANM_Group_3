@@ -42,8 +42,6 @@ class DesTextEncryptionTest {
         assertThrows(IllegalArgumentException.class,
                 () -> algorithm.encryptText("text", "short", EncodingFormat.BASE64));
         assertThrows(IllegalArgumentException.class,
-                () -> algorithm.encryptText("text", KEY_HEX, EncodingFormat.TEXT));
-        assertThrows(IllegalArgumentException.class,
                 () -> algorithm.decryptText("ABC", KEY_HEX, EncodingFormat.HEX));
     }
 }

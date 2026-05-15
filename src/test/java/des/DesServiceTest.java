@@ -70,8 +70,6 @@ class DesServiceTest {
         assertThrows(IllegalArgumentException.class,
                 () -> service.encrypt("text", InputFormat.TEXT, "bad-key", EncodingFormat.HEX));
         assertThrows(IllegalArgumentException.class,
-                () -> service.encrypt("text", InputFormat.TEXT, KEY_HEX, EncodingFormat.TEXT));
-        assertThrows(IllegalArgumentException.class,
                 () -> service.decrypt("not-base64", InputFormat.BASE64, KEY_HEX, EncodingFormat.HEX));
     }
 }
