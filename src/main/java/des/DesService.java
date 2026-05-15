@@ -33,13 +33,27 @@ public class DesService {
 
     public String describeKey(String hexKey) {
         byte[] key = EncodingUtils.decodeDesKeyHex(normalizeKey(hexKey));
-        long[] roundKeys = keyGenerator.generateRoundKeys(key);
+        KeyScheduleInfo schedule = keyGenerator.generateKeySchedule(key);
         StringBuilder builder = new StringBuilder();
-        builder.append("Key Hex: ").append(EncodingUtils.encodeHex(key)).append(System.lineSeparator());
+        builder.append("Key Hex: ").append(schedule.keyHex()).append(System.lineSeparator());
         builder.append("Key Bytes: 8").append(System.lineSeparator());
-        builder.append("Round Keys").append(System.lineSeparator());
-        for (int index = 0; index < roundKeys.length; index++) {
-            builder.append(String.format("K%02d: %012X%n", index + 1, roundKeys[index]));
+        builder.append("Key Bits: ").append(formatBinary(schedule.keyBits(), 64)).append(System.lineSeparator());
+        builder.append(System.lineSeparator());
+        builder.append("PC-1 (64 bits -> 56 bits, parity removed)").append(System.lineSeparator());
+        builder.append("PC-1: ").append(formatBinary(schedule.pc1Key(), 56)).append(System.lineSeparator());
+        builder.append("C0:   ").append(formatBinary(schedule.c0(), 28)).append(System.lineSeparator());
+        builder.append("D0:   ").append(formatBinary(schedule.d0(), 28)).append(System.lineSeparator());
+        builder.append(System.lineSeparator());
+        builder.append("Round key schedule").append(System.lineSeparator());
+        builder.append("Rnd Shift Cn                           Dn                           Kn (48-bit Hex)")
+                .append(System.lineSeparator());
+        for (KeyScheduleRound round : schedule.rounds()) {
+            builder.append(String.format("%02d  %-5d %-28s %-28s %012X%n",
+                    round.round(),
+                    round.shifts(),
+                    formatBinary(round.c(), 28),
+                    formatBinary(round.d(), 28),
+                    round.roundKey()));
         }
         return builder.toString();
     }
@@ -68,5 +82,13 @@ public class DesService {
 
     private String removeWhitespace(String value) {
         return value.replaceAll("\\s+", "");
+    }
+
+    private String formatBinary(long value, int bitCount) {
+        String binary = Long.toBinaryString(value);
+        if (binary.length() > bitCount) {
+            binary = binary.substring(binary.length() - bitCount);
+        }
+        return "0".repeat(bitCount - binary.length()) + binary;
     }
 }

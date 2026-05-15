@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DesServiceTest {
     private static final String KEY_HEX = "133457799BBCDFF1";
@@ -38,10 +39,26 @@ class DesServiceTest {
     void generatesValidRandomKeyAndDescribesRoundKeys() {
         DesService service = new DesService();
         String key = service.generateRandomKeyHex();
+        String keyInfo = service.describeKey(key);
 
         assertEquals(16, key.length());
         assertDoesNotThrow(() -> EncodingUtils.decodeDesKeyHex(key));
-        assertDoesNotThrow(() -> service.describeKey(key));
+        assertFalse(keyInfo.isBlank());
+        assertEquals(16, keyInfo.lines().filter(line -> line.matches("\\d{2}\\s+.*")).count());
+    }
+
+    @Test
+    void describesKnownDesKeyScheduleDetails() {
+        DesService service = new DesService();
+
+        String keyInfo = service.describeKey("13 34 57 79 9b bc df f1");
+
+        assertTrue(keyInfo.contains("Key Hex: 133457799BBCDFF1"));
+        assertTrue(keyInfo.contains("PC-1 (64 bits -> 56 bits, parity removed)"));
+        assertTrue(keyInfo.contains("01  1"));
+        assertTrue(keyInfo.contains("1B02EFFC7072"));
+        assertTrue(keyInfo.contains("16  1"));
+        assertTrue(keyInfo.contains("CB3D8B0E17F5"));
     }
 
     @Test

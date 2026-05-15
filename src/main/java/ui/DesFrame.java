@@ -20,6 +20,9 @@ import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
@@ -159,6 +162,8 @@ public class DesFrame extends JFrame {
         keyField.setToolTipText("16 hex characters, 8 bytes");
         keyField.setFont(Font.decode(Font.MONOSPACED));
         JButton generateButton = new JButton("Generate Random");
+        JButton loadKeyButton = new JButton("Load Key");
+        JButton saveKeyButton = new JButton("Save Key");
         JButton clearButton = new JButton("Clear Data");
 
         generateButton.addActionListener(event -> safelyRun("Generate random key", () -> {
@@ -166,11 +171,15 @@ public class DesFrame extends JFrame {
             refreshKeyInfo();
             showSuccess("Random DES key generated.");
         }));
+        loadKeyButton.addActionListener(event -> loadKeyFile());
+        saveKeyButton.addActionListener(event -> saveKeyFile());
         clearButton.addActionListener(event -> clearData());
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
         buttons.add(generateButton);
+        buttons.add(loadKeyButton);
+        buttons.add(saveKeyButton);
         buttons.add(clearButton);
 
         panel.add(keyField, BorderLayout.CENTER);
@@ -282,6 +291,22 @@ public class DesFrame extends JFrame {
         outputArea.setLineWrap(true);
         outputArea.setWrapStyleWord(true);
         keyInfoArea.setLineWrap(false);
+        keyField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent event) {
+                refreshKeyInfo();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent event) {
+                refreshKeyInfo();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent event) {
+                refreshKeyInfo();
+            }
+        });
     }
 
     private void encrypt() {
@@ -312,6 +337,7 @@ public class DesFrame extends JFrame {
 
     private void loadInputFile() {
         JFileChooser chooser = new JFileChooser();
+        chooser.setFileFilter(new FileNameExtensionFilter("Text files", "txt", "text", "csv", "log"));
         if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
             return;
         }
@@ -332,6 +358,7 @@ public class DesFrame extends JFrame {
             return;
         }
         JFileChooser chooser = new JFileChooser();
+        chooser.setFileFilter(new FileNameExtensionFilter("Text files", "txt", "text"));
         if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
             return;
         }
@@ -342,6 +369,45 @@ public class DesFrame extends JFrame {
                 showSuccess("Saved " + selectedFile.getName() + ".");
             } catch (IOException exception) {
                 throw new IllegalArgumentException("Could not save file: " + exception.getMessage(), exception);
+            }
+        });
+    }
+
+    private void loadKeyFile() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setFileFilter(new FileNameExtensionFilter("Key files", "key", "txt"));
+        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        File selectedFile = chooser.getSelectedFile();
+        safelyRun("Load key", () -> {
+            try {
+                String key = fileService.readText(selectedFile.toPath()).replaceAll("\\s+", "").toUpperCase();
+                desService.describeKey(key);
+                keyField.setText(key);
+                refreshKeyInfo();
+                showSuccess("Loaded key from " + selectedFile.getName() + ".");
+            } catch (IOException exception) {
+                throw new IllegalArgumentException("Could not load key: " + exception.getMessage(), exception);
+            }
+        });
+    }
+
+    private void saveKeyFile() {
+        String key = keyField.getText();
+        safelyRun("Save key", () -> {
+            desService.describeKey(key);
+            JFileChooser chooser = new JFileChooser();
+            chooser.setFileFilter(new FileNameExtensionFilter("Key files", "key", "txt"));
+            if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+                return;
+            }
+            File selectedFile = chooser.getSelectedFile();
+            try {
+                fileService.writeText(selectedFile.toPath(), key.replaceAll("\\s+", "").toUpperCase());
+                showSuccess("Saved key to " + selectedFile.getName() + ".");
+            } catch (IOException exception) {
+                throw new IllegalArgumentException("Could not save key: " + exception.getMessage(), exception);
             }
         });
     }
