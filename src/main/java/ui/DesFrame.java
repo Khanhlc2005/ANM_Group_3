@@ -1,9 +1,9 @@
 package ui;
 
+import des.DesService;
 import des.EncodingFormat;
 import des.EncodingUtils;
 import des.InputFormat;
-import des.DesService;
 import file.FileService;
 
 import javax.swing.BorderFactory;
@@ -447,22 +447,18 @@ public class DesFrame extends JFrame {
 
     private void loadInputFile() {
         JFileChooser chooser = new JFileChooser();
-        chooser.setFileFilter(textFileFilter());
+        chooser.setFileFilter(loadFileFilter());
         int choice = chooser.showOpenDialog(this);
         if (choice != JFileChooser.APPROVE_OPTION) {
-            showStatus("Đã hủy tải file.");
             return;
         }
 
         File selectedFile = chooser.getSelectedFile();
-        if (!fileService.isSupportedTextFile(selectedFile.toPath())) {
-            showError("File không được hỗ trợ. Vui lòng chọn .txt, .csv, .md, .log, .json hoặc .xml.");
-            return;
-        }
-
         try {
-            inputArea.setText(fileService.readText(selectedFile.toPath()));
+            inputArea.setText(fileService.readSupportedFile(selectedFile.toPath()));
             showSuccess("Đã tải file " + selectedFile.getName() + ".");
+        } catch (IllegalArgumentException exception) {
+            showError(exception.getMessage(), exception);
         } catch (IOException exception) {
             showError("Không thể đọc file. Vui lòng kiểm tra lại file đã chọn.", exception);
         }
@@ -475,10 +471,9 @@ public class DesFrame extends JFrame {
         }
 
         JFileChooser chooser = new JFileChooser();
-        chooser.setFileFilter(textFileFilter());
+        chooser.setFileFilter(saveFileFilter());
         int choice = chooser.showSaveDialog(this);
         if (choice != JFileChooser.APPROVE_OPTION) {
-            showStatus("Đã hủy lưu file.");
             return;
         }
 
@@ -496,7 +491,6 @@ public class DesFrame extends JFrame {
         chooser.setFileFilter(new FileNameExtensionFilter("Key files (*.key, *.txt)", "key", "txt"));
         int choice = chooser.showOpenDialog(this);
         if (choice != JFileChooser.APPROVE_OPTION) {
-            showStatus("Đã hủy tải khóa.");
             return;
         }
 
@@ -521,7 +515,6 @@ public class DesFrame extends JFrame {
         chooser.setFileFilter(new FileNameExtensionFilter("Key files (*.key, *.txt)", "key", "txt"));
         int choice = chooser.showSaveDialog(this);
         if (choice != JFileChooser.APPROVE_OPTION) {
-            showStatus("Đã hủy lưu khóa.");
             return;
         }
 
@@ -600,10 +593,16 @@ public class DesFrame extends JFrame {
         return builder.toString();
     }
 
-    private FileNameExtensionFilter textFileFilter() {
+    private FileNameExtensionFilter loadFileFilter() {
         return new FileNameExtensionFilter(
-                "Text files (*.txt, *.csv, *.md, *.log, *.json, *.xml)",
-                fileService.supportedTextExtensions());
+                "Supported files (*.txt, *.csv, *.json, *.xml, *.docx, *.pdf)",
+                fileService.supportedLoadExtensions());
+    }
+
+    private FileNameExtensionFilter saveFileFilter() {
+        return new FileNameExtensionFilter(
+                "Text files (*.txt, *.csv, *.json, *.xml)",
+                fileService.supportedSaveExtensions());
     }
 
     private InputFormat selectedInputFormat() {
