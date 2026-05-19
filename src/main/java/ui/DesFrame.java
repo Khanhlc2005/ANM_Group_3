@@ -37,6 +37,10 @@ import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 
 public class DesFrame extends JFrame {
     private static final String WORKSPACE_CARD = "workspace";
@@ -60,6 +64,7 @@ public class DesFrame extends JFrame {
     private final JTextField keyField = new JTextField();
     private final JTextArea inputArea = new JTextArea();
     private final JTextArea outputArea = new JTextArea();
+    private final JTextArea outputPreviewArea = new JTextArea();
     private final JTextArea keyInfoArea = new JTextArea();
     private final JComboBox<InputFormat> inputFormatCombo = new JComboBox<>(InputFormat.values());
     private final JComboBox<EncodingFormat> outputFormatCombo = new JComboBox<>(EncodingFormat.values());
@@ -240,8 +245,37 @@ public class DesFrame extends JFrame {
         topBar.add(saveButton);
 
         panel.add(topBar, BorderLayout.NORTH);
-        panel.add(new JScrollPane(outputArea), BorderLayout.CENTER);
+        panel.add(buildOutputContentPanel(), BorderLayout.CENTER);
         return panel;
+    }
+
+    private JPanel buildOutputContentPanel() {
+        JPanel content = new JPanel(new GridBagLayout());
+        content.setOpaque(false);
+
+        GridBagConstraints outputConstraints = new GridBagConstraints();
+        outputConstraints.gridx = 0;
+        outputConstraints.gridy = 0;
+        outputConstraints.weightx = 1;
+        outputConstraints.weighty = 1;
+        outputConstraints.fill = GridBagConstraints.BOTH;
+        outputConstraints.insets = new Insets(0, 0, 10, 0);
+        content.add(new JScrollPane(outputArea), outputConstraints);
+
+        outputPreviewArea.setEditable(false);
+        JPanel previewPanel = cardPanel("Output Text Preview");
+        previewPanel.setLayout(new BorderLayout());
+        previewPanel.add(new JScrollPane(outputPreviewArea), BorderLayout.CENTER);
+
+        GridBagConstraints previewConstraints = new GridBagConstraints();
+        previewConstraints.gridx = 0;
+        previewConstraints.gridy = 1;
+        previewConstraints.weightx = 1;
+        previewConstraints.weighty = 0.45;
+        previewConstraints.fill = GridBagConstraints.BOTH;
+        content.add(previewPanel, previewConstraints);
+
+        return content;
     }
 
     private JPanel buildKeyInfoPanel() {
@@ -324,6 +358,8 @@ public class DesFrame extends JFrame {
         inputArea.setWrapStyleWord(true);
         outputArea.setLineWrap(true);
         outputArea.setWrapStyleWord(true);
+        outputPreviewArea.setLineWrap(true);
+        outputPreviewArea.setWrapStyleWord(true);
         keyInfoArea.setLineWrap(false);
         keyField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
@@ -370,7 +406,8 @@ public class DesFrame extends JFrame {
                     keyField.getText(),
                     selectedOutputFormat());
             outputArea.setText(result);
-            showSuccess("Mã hóa thành công.");
+            outputPreviewArea.setText("Ciphertext là dữ liệu đã mã hóa, không nên đọc trực tiếp như văn bản.");
+            showSuccess("Mã hóa thành công. Output Text Preview đã cập nhật.");
         } catch (RuntimeException exception) {
             showError("Mã hóa thất bại. Vui lòng kiểm tra dữ liệu đầu vào.", exception);
         }
@@ -388,16 +425,48 @@ public class DesFrame extends JFrame {
         }
 
         try {
-            String result = desService.decrypt(
+            byte[] plainBytes = desService.decryptToPlainBytes(
                     inputArea.getText(),
                     selectedInputFormat(),
-                    keyField.getText(),
-                    selectedOutputFormat());
+                    keyField.getText());
+            String result = EncodingUtils.encode(plainBytes, selectedOutputFormat());
             outputArea.setText(result);
-            showSuccess("Giải mã thành công.");
+            outputPreviewArea.setText(buildPlainTextPreview(plainBytes));
+            showSuccess("Giải mã thành công. Output Text Preview đã cập nhật.");
         } catch (RuntimeException exception) {
             showError("Giải mã thất bại. Vui lòng kiểm tra khóa hoặc dữ liệu đầu vào.", exception);
         }
+    }
+
+    private String buildPlainTextPreview(byte[] plainBytes) {
+        try {
+            String text = StandardCharsets.UTF_8
+                    .newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT)
+                    .decode(ByteBuffer.wrap(plainBytes))
+                    .toString();
+            if (!isSafePreviewText(text)) {
+                return "Plaintext đã giải mã thành công nhưng chứa ký tự không phù hợp để hiển thị dạng văn bản.";
+            }
+            return text;
+        } catch (CharacterCodingException exception) {
+            return "Plaintext đã giải mã thành công nhưng không thể hiển thị an toàn dạng văn bản UTF-8.";
+        }
+    }
+
+    private boolean isSafePreviewText(String text) {
+        for (int offset = 0; offset < text.length(); ) {
+            int codePoint = text.codePointAt(offset);
+            if (Character.isISOControl(codePoint)
+                    && codePoint != '\n'
+                    && codePoint != '\r'
+                    && codePoint != '\t') {
+                return false;
+            }
+            offset += Character.charCount(codePoint);
+        }
+        return true;
     }
 
     private boolean validateInput(String actionName) {
@@ -546,7 +615,8 @@ public class DesFrame extends JFrame {
     private void clearData() {
         inputArea.setText("");
         outputArea.setText("");
-        showStatus("Đã xóa dữ liệu vào và kết quả.");
+        outputPreviewArea.setText("");
+        showStatus("Đã xóa dữ liệu vào, kết quả và Output Text Preview.");
     }
 
     private void refreshKeyInfo() {

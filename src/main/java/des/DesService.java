@@ -27,10 +27,14 @@ public class DesService {
 
     // Chuẩn hóa bản mã từ giao diện, giải mã DES và xuất byte rõ theo định dạng đã chọn.
     public String decrypt(String input, InputFormat inputFormat, String hexKey, EncodingFormat outputFormat) {
+        byte[] plainBytes = decryptToPlainBytes(input, inputFormat, hexKey);
+        return EncodingUtils.encode(plainBytes, outputFormat);
+    }
+
+    public byte[] decryptToPlainBytes(String input, InputFormat inputFormat, String hexKey) {
         byte[] key = EncodingUtils.decodeDesKeyHex(normalizeKey(hexKey));
         byte[] cipherBytes = decodeInput(input, inputFormat);
-        byte[] plainBytes = algorithm.decrypt(cipherBytes, key);
-        return EncodingUtils.encode(plainBytes, outputFormat);
+        return algorithm.decrypt(cipherBytes, key);
     }
 
     // Tạo mô tả lịch sinh khóa để kiểm tra PC-1, C/D và 16 khóa vòng DES.

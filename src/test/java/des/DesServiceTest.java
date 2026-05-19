@@ -24,6 +24,17 @@ class DesServiceTest {
     }
 
     @Test
+    void decryptsCipherTextToPlainBytesForTextPreview() {
+        DesService service = new DesService();
+        String plainText = "Plaintext preview";
+        String cipherText = service.encrypt(plainText, InputFormat.TEXT, KEY_HEX, EncodingFormat.BASE64);
+
+        byte[] plainBytes = service.decryptToPlainBytes(cipherText, InputFormat.BASE64, KEY_HEX);
+
+        assertEquals(plainText, EncodingUtils.utf8String(plainBytes));
+    }
+
+    @Test
     void encryptsHexInputToHexAndDecryptsToBase64PlainBytes() {
         DesService service = new DesService();
         String plainHex = "0123456789ABCDEF";
