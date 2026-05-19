@@ -66,6 +66,8 @@ public class DesFrame extends JFrame {
     private final JTextArea outputArea = new JTextArea();
     private final JTextArea outputPreviewArea = new JTextArea();
     private final JTextArea keyInfoArea = new JTextArea();
+    private final JLabel inputCounterLabel = new JLabel();
+    private final JLabel outputCounterLabel = new JLabel();
     private final JComboBox<InputFormat> inputFormatCombo = new JComboBox<>(InputFormat.values());
     private final JComboBox<EncodingFormat> outputFormatCombo = new JComboBox<>(EncodingFormat.values());
 
@@ -200,8 +202,17 @@ public class DesFrame extends JFrame {
         topBar.add(loadButton);
 
         panel.add(topBar, BorderLayout.NORTH);
-        panel.add(new JScrollPane(inputArea), BorderLayout.CENTER);
+        panel.add(buildTextAreaWithCounter(inputArea, inputCounterLabel), BorderLayout.CENTER);
         return panel;
+    }
+
+    private JPanel buildTextAreaWithCounter(JTextArea textArea, JLabel counterLabel) {
+        JPanel content = new JPanel(new BorderLayout(0, 6));
+        content.setOpaque(false);
+        counterLabel.setForeground(TEXT_MUTED);
+        content.add(new JScrollPane(textArea), BorderLayout.CENTER);
+        content.add(counterLabel, BorderLayout.SOUTH);
+        return content;
     }
 
     private JPanel buildActionPanel() {
@@ -263,7 +274,7 @@ public class DesFrame extends JFrame {
         outputConstraints.weighty = 1;
         outputConstraints.fill = GridBagConstraints.BOTH;
         outputConstraints.insets = new Insets(0, 0, 10, 0);
-        content.add(new JScrollPane(outputArea), outputConstraints);
+        content.add(buildTextAreaWithCounter(outputArea, outputCounterLabel), outputConstraints);
 
         outputPreviewArea.setEditable(false);
         JPanel previewPanel = cardPanel("Output Text Preview");
@@ -364,6 +375,12 @@ public class DesFrame extends JFrame {
         outputPreviewArea.setLineWrap(true);
         outputPreviewArea.setWrapStyleWord(true);
         keyInfoArea.setLineWrap(false);
+        inputCounterLabel.setText(buildCounterText(inputArea.getText(), selectedInputFormat()));
+        outputCounterLabel.setText(buildCounterText(outputArea.getText(), selectedOutputFormat()));
+        inputArea.getDocument().addDocumentListener(counterListener(this::refreshInputCounter));
+        outputArea.getDocument().addDocumentListener(counterListener(this::refreshOutputCounter));
+        inputFormatCombo.addActionListener(event -> refreshInputCounter());
+        outputFormatCombo.addActionListener(event -> refreshOutputCounter());
         keyField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent event) {
@@ -380,6 +397,59 @@ public class DesFrame extends JFrame {
                 refreshKeyInfo();
             }
         });
+    }
+
+    private DocumentListener counterListener(Runnable refreshAction) {
+        return new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent event) {
+                refreshAction.run();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent event) {
+                refreshAction.run();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent event) {
+                refreshAction.run();
+            }
+        };
+    }
+
+    private void refreshInputCounter() {
+        inputCounterLabel.setText(buildCounterText(inputArea.getText(), selectedInputFormat()));
+    }
+
+    private void refreshOutputCounter() {
+        outputCounterLabel.setText(buildCounterText(outputArea.getText(), selectedOutputFormat()));
+    }
+
+    private String buildCounterText(String value, InputFormat format) {
+        return buildCounterText(value, format == InputFormat.HEX);
+    }
+
+    private String buildCounterText(String value, EncodingFormat format) {
+        return buildCounterText(value, format == EncodingFormat.HEX);
+    }
+
+    private String buildCounterText(String value, boolean hexFormat) {
+        String text = value == null ? "" : value;
+        String counterText = "Ký tự: " + text.length()
+                + " | Byte UTF-8: " + text.getBytes(StandardCharsets.UTF_8).length;
+        if (!hexFormat) {
+            return counterText;
+        }
+
+        String hex = removeWhitespace(text);
+        if (hex.isEmpty()) {
+            return counterText + " | Hex: 0 ký tự = 0 byte";
+        }
+        if ((hex.length() % 2) != 0 || !isHex(hex)) {
+            return counterText + " | Hex không hợp lệ";
+        }
+        return counterText + " | Hex: " + hex.length() + " ký tự = " + (hex.length() / 2) + " byte";
     }
 
     private void generateRandomKey() {
@@ -625,6 +695,8 @@ public class DesFrame extends JFrame {
         inputArea.setText(output);
         inputFormatCombo.setSelectedItem(inputFormatFor(selectedOutputFormat()));
         outputPreviewArea.setText("");
+        refreshInputCounter();
+        refreshOutputCounter();
         showStatus("Đã chuyển output sang input.");
     }
 
