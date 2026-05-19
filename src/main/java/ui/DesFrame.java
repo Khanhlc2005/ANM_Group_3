@@ -24,6 +24,10 @@ import javax.swing.SwingConstants;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DocumentFilter;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
@@ -66,6 +70,7 @@ public class DesFrame extends JFrame {
     private final JTextArea outputArea = new JTextArea();
     private final JTextArea outputPreviewArea = new JTextArea();
     private final JTextArea keyInfoArea = new JTextArea();
+    private final JLabel keyStatusLabel = new JLabel();
     private final JLabel inputCounterLabel = new JLabel();
     private final JLabel outputCounterLabel = new JLabel();
     private final JComboBox<InputFormat> inputFormatCombo = new JComboBox<>(InputFormat.values());
@@ -165,6 +170,12 @@ public class DesFrame extends JFrame {
 
         keyField.setToolTipText("16 ký tự Hex, tương đương 8 byte");
         keyField.setFont(Font.decode(Font.MONOSPACED));
+        keyStatusLabel.setForeground(TEXT_MUTED);
+
+        JPanel keyInputPanel = new JPanel(new BorderLayout(0, 6));
+        keyInputPanel.setOpaque(false);
+        keyInputPanel.add(keyField, BorderLayout.CENTER);
+        keyInputPanel.add(keyStatusLabel, BorderLayout.SOUTH);
 
         JButton generateButton = neutralButton("Tạo ngẫu nhiên");
         JButton loadKeyButton = neutralButton("Tải khóa");
@@ -183,7 +194,7 @@ public class DesFrame extends JFrame {
         buttons.add(saveKeyButton);
         buttons.add(clearButton);
 
-        panel.add(keyField, BorderLayout.CENTER);
+        panel.add(keyInputPanel, BorderLayout.CENTER);
         panel.add(buttons, BorderLayout.EAST);
         return panel;
     }
@@ -367,6 +378,7 @@ public class DesFrame extends JFrame {
     }
 
     private void configureInputs() {
+        ((AbstractDocument) keyField.getDocument()).setDocumentFilter(new HexKeyDocumentFilter());
         outputFormatCombo.setSelectedItem(EncodingFormat.BASE64);
         inputArea.setLineWrap(true);
         inputArea.setWrapStyleWord(true);
@@ -381,22 +393,64 @@ public class DesFrame extends JFrame {
         outputArea.getDocument().addDocumentListener(counterListener(this::refreshOutputCounter));
         inputFormatCombo.addActionListener(event -> refreshInputCounter());
         outputFormatCombo.addActionListener(event -> refreshOutputCounter());
+        refreshKeyStatus();
         keyField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent event) {
                 refreshKeyInfo();
+                refreshKeyStatus();
             }
 
             @Override
             public void removeUpdate(DocumentEvent event) {
                 refreshKeyInfo();
+                refreshKeyStatus();
             }
 
             @Override
             public void changedUpdate(DocumentEvent event) {
                 refreshKeyInfo();
+                refreshKeyStatus();
             }
         });
+    }
+
+    private static class HexKeyDocumentFilter extends DocumentFilter {
+        private static final int MAX_KEY_LENGTH = 16;
+
+        @Override
+        public void insertString(FilterBypass bypass, int offset, String string, AttributeSet attributes)
+                throws BadLocationException {
+            replace(bypass, offset, 0, string, attributes);
+        }
+
+        @Override
+        public void replace(FilterBypass bypass, int offset, int length, String text, AttributeSet attributes)
+                throws BadLocationException {
+            String filteredText = filterHex(text);
+            int availableLength = MAX_KEY_LENGTH - (bypass.getDocument().getLength() - length);
+            if (filteredText.isEmpty() || availableLength <= 0) {
+                return;
+            }
+            if (filteredText.length() > availableLength) {
+                filteredText = filteredText.substring(0, availableLength);
+            }
+            super.replace(bypass, offset, length, filteredText, attributes);
+        }
+
+        private String filterHex(String text) {
+            if (text == null || text.isEmpty()) {
+                return "";
+            }
+            StringBuilder builder = new StringBuilder(text.length());
+            for (int index = 0; index < text.length(); index++) {
+                char character = Character.toUpperCase(text.charAt(index));
+                if (Character.digit(character, 16) != -1) {
+                    builder.append(character);
+                }
+            }
+            return builder.toString();
+        }
     }
 
     private DocumentListener counterListener(Runnable refreshAction) {
@@ -424,6 +478,23 @@ public class DesFrame extends JFrame {
 
     private void refreshOutputCounter() {
         outputCounterLabel.setText(buildCounterText(outputArea.getText(), selectedOutputFormat()));
+    }
+
+    private void refreshKeyStatus() {
+        String key = normalizedKey();
+        if (key.isEmpty()) {
+            keyStatusLabel.setForeground(TEXT_MUTED);
+            keyStatusLabel.setText("Chưa nhập khóa");
+        } else if (key.length() < 16) {
+            keyStatusLabel.setForeground(TEXT_MUTED);
+            keyStatusLabel.setText("Thiếu " + (16 - key.length()) + " ký tự");
+        } else if (key.length() == 16 && isHex(key)) {
+            keyStatusLabel.setForeground(SUCCESS_COLOR);
+            keyStatusLabel.setText("Khóa hợp lệ");
+        } else {
+            keyStatusLabel.setForeground(ERROR_COLOR);
+            keyStatusLabel.setText("Khóa không hợp lệ");
+        }
     }
 
     private String buildCounterText(String value, InputFormat format) {
