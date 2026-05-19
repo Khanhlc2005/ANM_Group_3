@@ -7,6 +7,8 @@ import des.EncodingUtils;
 import des.DesProcessResult;
 import des.InputFormat;
 import file.FileService;
+import ui.components.RoundedCardPanel;
+import ui.theme.AppTheme;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -36,12 +38,9 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.io.File;
@@ -51,21 +50,16 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 
+import static ui.components.UiFactory.dashboardCard;
+import static ui.components.UiFactory.neutralButton;
+import static ui.components.UiFactory.outlineButton;
+import static ui.components.UiFactory.primaryButton;
+import static ui.components.UiFactory.transparentPanel;
+
 public class DesFrame extends JFrame {
     private static final String WORKSPACE_CARD = "workspace";
     private static final String KEY_INFO_CARD = "keyInfo";
     private static final String PROCESS_CARD = "process";
-
-    private static final Color PAGE_BACKGROUND = new Color(245, 247, 250);
-    private static final Color PANEL_BACKGROUND = Color.WHITE;
-    private static final Color SIDEBAR_BACKGROUND = new Color(235, 240, 246);
-    private static final Color ACTIVE_NAV_BACKGROUND = new Color(213, 234, 228);
-    private static final Color PRIMARY_COLOR = new Color(32, 111, 89);
-    private static final Color PRIMARY_DARK = new Color(23, 82, 66);
-    private static final Color BORDER_COLOR = new Color(218, 225, 233);
-    private static final Color ERROR_COLOR = new Color(170, 35, 35);
-    private static final Color SUCCESS_COLOR = new Color(25, 105, 65);
-    private static final Color TEXT_MUTED = new Color(86, 96, 110);
 
     private final DesService desService;
     private final FileService fileService;
@@ -101,7 +95,7 @@ public class DesFrame extends JFrame {
         setMinimumSize(new Dimension(1120, 720));
         setLocationByPlatform(true);
         setLayout(new BorderLayout());
-        getContentPane().setBackground(PAGE_BACKGROUND);
+        getContentPane().setBackground(AppTheme.PAGE_BACKGROUND);
 
         add(buildBody(), BorderLayout.CENTER);
         add(buildStatusBar(), BorderLayout.SOUTH);
@@ -111,7 +105,7 @@ public class DesFrame extends JFrame {
     }
 
     private JSplitPane buildBody() {
-        contentPanel.setBackground(PAGE_BACKGROUND);
+        contentPanel.setBackground(AppTheme.PAGE_BACKGROUND);
         contentPanel.add(buildWorkspacePanel(), WORKSPACE_CARD);
         contentPanel.add(buildKeyInfoPanel(), KEY_INFO_CARD);
         contentPanel.add(buildProcessPanel(), PROCESS_CARD);
@@ -127,7 +121,7 @@ public class DesFrame extends JFrame {
     private JPanel buildNavigationPanel() {
         JPanel navigation = new JPanel();
         navigation.setLayout(new BoxLayout(navigation, BoxLayout.Y_AXIS));
-        navigation.setBackground(SIDEBAR_BACKGROUND);
+        navigation.setBackground(AppTheme.SIDEBAR_BACKGROUND);
         navigation.setBorder(BorderFactory.createEmptyBorder(24, 16, 16, 16));
         navigation.setPreferredSize(new Dimension(220, 0));
 
@@ -135,7 +129,7 @@ public class DesFrame extends JFrame {
         title.setFont(title.getFont().deriveFont(Font.BOLD, 24f));
 
         JLabel subtitle = new JLabel("Bảo mật chính xác");
-        subtitle.setForeground(TEXT_MUTED);
+        subtitle.setForeground(AppTheme.TEXT_MUTED);
         subtitle.setBorder(BorderFactory.createEmptyBorder(2, 0, 26, 0));
 
         workspaceButton.addActionListener(event -> showCard(WORKSPACE_CARD, "Mã hóa/Giải mã"));
@@ -164,7 +158,7 @@ public class DesFrame extends JFrame {
         JButton button = new JButton(text);
         button.setHorizontalAlignment(SwingConstants.LEFT);
         button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
-        button.setBackground(PANEL_BACKGROUND);
+        button.setBackground(AppTheme.PANEL_BACKGROUND);
         button.setForeground(Color.DARK_GRAY);
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
@@ -173,7 +167,7 @@ public class DesFrame extends JFrame {
 
     private JPanel buildWorkspacePanel() {
         JPanel workspace = new JPanel(new GridBagLayout());
-        workspace.setBackground(PAGE_BACKGROUND);
+        workspace.setBackground(AppTheme.PAGE_BACKGROUND);
         workspace.setBorder(BorderFactory.createEmptyBorder(24, 24, 20, 24));
 
         addWorkspacePanel(workspace, buildSecretKeyPanel(), 0, 0, 3, 1, 0, new Insets(0, 0, 18, 0));
@@ -190,7 +184,7 @@ public class DesFrame extends JFrame {
 
         keyField.setToolTipText("16 ký tự Hex, tương đương 8 byte");
         keyField.setFont(Font.decode(Font.MONOSPACED));
-        keyStatusLabel.setForeground(TEXT_MUTED);
+        keyStatusLabel.setForeground(AppTheme.TEXT_MUTED);
 
         JPanel keyInputPanel = new JPanel(new BorderLayout(0, 6));
         keyInputPanel.setOpaque(false);
@@ -242,7 +236,7 @@ public class DesFrame extends JFrame {
     private JPanel buildTextAreaWithCounter(JTextArea textArea, JLabel counterLabel) {
         JPanel content = new JPanel(new BorderLayout(0, 6));
         content.setOpaque(false);
-        counterLabel.setForeground(TEXT_MUTED);
+        counterLabel.setForeground(AppTheme.TEXT_MUTED);
         content.add(new JScrollPane(textArea), BorderLayout.CENTER);
         content.add(counterLabel, BorderLayout.SOUTH);
         return content;
@@ -304,7 +298,7 @@ public class DesFrame extends JFrame {
 
     private JPanel buildKeyInfoPanel() {
         JPanel panel = new JPanel(new BorderLayout(12, 12));
-        panel.setBackground(PAGE_BACKGROUND);
+        panel.setBackground(AppTheme.PAGE_BACKGROUND);
         panel.setBorder(BorderFactory.createEmptyBorder(24, 24, 16, 24));
 
         JPanel card = dashboardCard("Thông tin khóa", "DES key schedule and round-key details.");
@@ -318,7 +312,7 @@ public class DesFrame extends JFrame {
 
     private JPanel buildProcessPanel() {
         JPanel panel = new JPanel(new BorderLayout(12, 12));
-        panel.setBackground(PAGE_BACKGROUND);
+        panel.setBackground(AppTheme.PAGE_BACKGROUND);
         panel.setBorder(BorderFactory.createEmptyBorder(24, 24, 16, 24));
 
         JPanel card = dashboardCard("DES Process", "Latest successful DES encrypt or decrypt process.");
@@ -328,98 +322,6 @@ public class DesFrame extends JFrame {
         card.add(new JScrollPane(processArea), BorderLayout.CENTER);
         panel.add(card, BorderLayout.CENTER);
         return panel;
-    }
-
-    private JPanel dashboardCard(String title, String description) {
-        JPanel panel = new RoundedCardPanel();
-        panel.setLayout(new BorderLayout(0, 12));
-        panel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
-        panel.add(cardHeader(title, description), BorderLayout.NORTH);
-        return panel;
-    }
-
-    private JPanel cardHeader(String title, String description) {
-        JPanel header = transparentPanel();
-        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
-
-        JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 15f));
-        titleLabel.setForeground(Color.DARK_GRAY);
-        header.add(titleLabel);
-
-        if (description != null && !description.isBlank()) {
-            JLabel descriptionLabel = new JLabel(description);
-            descriptionLabel.setForeground(TEXT_MUTED);
-            descriptionLabel.setBorder(BorderFactory.createEmptyBorder(3, 0, 0, 0));
-            header.add(descriptionLabel);
-        }
-
-        return header;
-    }
-
-    private JPanel transparentPanel() {
-        JPanel panel = new JPanel();
-        panel.setOpaque(false);
-        return panel;
-    }
-
-    private JPanel transparentPanel(java.awt.LayoutManager layout) {
-        JPanel panel = new JPanel(layout);
-        panel.setOpaque(false);
-        return panel;
-    }
-
-    private static class RoundedCardPanel extends JPanel {
-        private static final int ARC = 18;
-
-        RoundedCardPanel() {
-            setOpaque(false);
-        }
-
-        @Override
-        protected void paintComponent(Graphics graphics) {
-            Graphics2D graphics2D = (Graphics2D) graphics.create();
-            graphics2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            graphics2D.setColor(PANEL_BACKGROUND);
-            graphics2D.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, ARC, ARC);
-            graphics2D.setColor(BORDER_COLOR);
-            graphics2D.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, ARC, ARC);
-            graphics2D.dispose();
-            super.paintComponent(graphics);
-        }
-    }
-
-    private JButton primaryButton(String text) {
-        JButton button = new JButton(text);
-        button.setPreferredSize(new Dimension(140, 42));
-        button.setMaximumSize(new Dimension(140, 42));
-        button.setBackground(PRIMARY_COLOR);
-        button.setForeground(Color.WHITE);
-        button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
-        return button;
-    }
-
-    private JButton outlineButton(String text) {
-        JButton button = new JButton(text);
-        button.setPreferredSize(new Dimension(140, 42));
-        button.setMaximumSize(new Dimension(140, 42));
-        button.setBackground(PANEL_BACKGROUND);
-        button.setForeground(PRIMARY_DARK);
-        button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createLineBorder(PRIMARY_COLOR));
-        return button;
-    }
-
-    private JButton neutralButton(String text) {
-        JButton button = new JButton(text);
-        button.setFocusPainted(false);
-        button.setBackground(new Color(248, 250, 252));
-        button.setForeground(Color.DARK_GRAY);
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER_COLOR),
-                BorderFactory.createEmptyBorder(7, 10, 7, 10)));
-        return button;
     }
 
     private void addWorkspacePanel(JPanel target, JPanel panel, int x, int y, int width, int height,
@@ -555,16 +457,16 @@ public class DesFrame extends JFrame {
     private void refreshKeyStatus() {
         String key = normalizedKey();
         if (key.isEmpty()) {
-            keyStatusLabel.setForeground(TEXT_MUTED);
+            keyStatusLabel.setForeground(AppTheme.TEXT_MUTED);
             keyStatusLabel.setText("Chưa nhập khóa");
         } else if (key.length() < 16) {
-            keyStatusLabel.setForeground(TEXT_MUTED);
+            keyStatusLabel.setForeground(AppTheme.TEXT_MUTED);
             keyStatusLabel.setText("Thiếu " + (16 - key.length()) + " ký tự");
         } else if (key.length() == 16 && isHex(key)) {
-            keyStatusLabel.setForeground(SUCCESS_COLOR);
+            keyStatusLabel.setForeground(AppTheme.SUCCESS_COLOR);
             keyStatusLabel.setText("Khóa hợp lệ");
         } else {
-            keyStatusLabel.setForeground(ERROR_COLOR);
+            keyStatusLabel.setForeground(AppTheme.ERROR_COLOR);
             keyStatusLabel.setText("Khóa không hợp lệ");
         }
     }
@@ -999,8 +901,8 @@ public class DesFrame extends JFrame {
     }
 
     private void styleNavigationButton(JButton button, boolean active) {
-        button.setBackground(active ? ACTIVE_NAV_BACKGROUND : PANEL_BACKGROUND);
-        button.setForeground(active ? PRIMARY_DARK : Color.DARK_GRAY);
+        button.setBackground(active ? AppTheme.ACTIVE_NAV_BACKGROUND : AppTheme.PANEL_BACKGROUND);
+        button.setForeground(active ? AppTheme.PRIMARY_DARK : Color.DARK_GRAY);
         button.setFont(button.getFont().deriveFont(active ? Font.BOLD : Font.PLAIN));
     }
 
@@ -1010,7 +912,7 @@ public class DesFrame extends JFrame {
     }
 
     private void showSuccess(String message) {
-        statusLabel.setForeground(SUCCESS_COLOR);
+        statusLabel.setForeground(AppTheme.SUCCESS_COLOR);
         statusLabel.setText(message);
     }
 
@@ -1019,7 +921,7 @@ public class DesFrame extends JFrame {
     }
 
     private void showError(String message, Exception exception) {
-        statusLabel.setForeground(ERROR_COLOR);
+        statusLabel.setForeground(AppTheme.ERROR_COLOR);
         statusLabel.setText(message);
         if (exception != null) {
             exception.printStackTrace(System.err);
