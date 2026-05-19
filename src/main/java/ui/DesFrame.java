@@ -239,10 +239,13 @@ public class DesFrame extends JFrame {
 
         JButton copyButton = neutralButton("Sao chép");
         JButton saveButton = neutralButton("Lưu file");
+        JButton useOutputAsInputButton = neutralButton("Dùng output làm input");
         copyButton.addActionListener(event -> copyOutput());
         saveButton.addActionListener(event -> saveOutputFile());
+        useOutputAsInputButton.addActionListener(event -> useOutputAsInput());
         topBar.add(copyButton);
         topBar.add(saveButton);
+        topBar.add(useOutputAsInputButton);
 
         panel.add(topBar, BorderLayout.NORTH);
         panel.add(buildOutputContentPanel(), BorderLayout.CENTER);
@@ -610,6 +613,26 @@ public class DesFrame extends JFrame {
         } catch (RuntimeException exception) {
             showError("Không thể sao chép kết quả.", exception);
         }
+    }
+
+    private void useOutputAsInput() {
+        String output = outputArea.getText();
+        if (output == null || output.isBlank()) {
+            showStatus("Chưa có dữ liệu output để chuyển sang input.");
+            return;
+        }
+
+        inputArea.setText(output);
+        inputFormatCombo.setSelectedItem(inputFormatFor(selectedOutputFormat()));
+        outputPreviewArea.setText("");
+        showStatus("Đã chuyển output sang input.");
+    }
+
+    private InputFormat inputFormatFor(EncodingFormat outputFormat) {
+        return switch (outputFormat) {
+            case BASE64 -> InputFormat.BASE64;
+            case HEX -> InputFormat.HEX;
+        };
     }
 
     private void clearData() {
