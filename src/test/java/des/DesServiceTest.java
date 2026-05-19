@@ -12,6 +12,40 @@ class DesServiceTest {
     private static final String KEY_HEX = "133457799BBCDFF1";
 
     @Test
+    void roundTripsPlaintextLengthsWithCoreDes() {
+        DesAlgorithm algorithm = new DesAlgorithm();
+        byte[] key = EncodingUtils.decodeDesKeyHex(KEY_HEX);
+        String[] plaintexts = {
+                "",
+                "A",
+                "1234567",
+                "12345678",
+                "123456789",
+                "Tiếng Việt có dấu"
+        };
+
+        for (String plaintext : plaintexts) {
+            byte[] plainBytes = EncodingUtils.utf8Bytes(plaintext);
+
+            byte[] cipherBytes = algorithm.encrypt(plainBytes, key);
+            byte[] decryptedBytes = algorithm.decrypt(cipherBytes, key);
+
+            assertEquals(plaintext, EncodingUtils.utf8String(decryptedBytes));
+        }
+    }
+
+    @Test
+    void roundTripsPlaintextThroughServiceOutputEncoding() {
+        DesService service = new DesService();
+        String plaintext = "DES service round trip";
+
+        String cipherText = service.encrypt(plaintext, InputFormat.TEXT, KEY_HEX, EncodingFormat.BASE64);
+        byte[] decryptedBytes = service.decryptToPlainBytes(cipherText, InputFormat.BASE64, KEY_HEX);
+
+        assertEquals(plaintext, EncodingUtils.utf8String(decryptedBytes));
+    }
+
+    @Test
     void encryptsTextInputToBase64AndDecryptsToHexPlainBytes() {
         DesService service = new DesService();
         String plainText = "DES Studio";
@@ -127,6 +161,30 @@ class DesServiceTest {
                 () -> service.encrypt("", InputFormat.TEXT, KEY_HEX, EncodingFormat.HEX));
         assertThrows(IllegalArgumentException.class,
                 () -> service.encrypt("text", InputFormat.TEXT, "bad-key", EncodingFormat.HEX));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.decrypt("not-base64", InputFormat.BASE64, KEY_HEX, EncodingFormat.HEX));
+    }
+
+    @Test
+    void rejectsInvalidKeys() {
+        DesService service = new DesService();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.encrypt("text", InputFormat.TEXT, "", EncodingFormat.BASE64));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.encrypt("text", InputFormat.TEXT, "133457799BBCDFF", EncodingFormat.BASE64));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.encrypt("text", InputFormat.TEXT, "133457799BBCDFFZ", EncodingFormat.BASE64));
+    }
+
+    @Test
+    void rejectsInvalidInputFormats() {
+        DesService service = new DesService();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.encrypt("ABC", InputFormat.HEX, KEY_HEX, EncodingFormat.BASE64));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.encrypt("GG", InputFormat.HEX, KEY_HEX, EncodingFormat.BASE64));
         assertThrows(IllegalArgumentException.class,
                 () -> service.decrypt("not-base64", InputFormat.BASE64, KEY_HEX, EncodingFormat.HEX));
     }
