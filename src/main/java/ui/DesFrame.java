@@ -34,9 +34,12 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.io.File;
@@ -53,6 +56,7 @@ public class DesFrame extends JFrame {
     private static final Color PAGE_BACKGROUND = new Color(245, 247, 250);
     private static final Color PANEL_BACKGROUND = Color.WHITE;
     private static final Color SIDEBAR_BACKGROUND = new Color(235, 240, 246);
+    private static final Color ACTIVE_NAV_BACKGROUND = new Color(213, 234, 228);
     private static final Color PRIMARY_COLOR = new Color(32, 111, 89);
     private static final Color PRIMARY_DARK = new Color(23, 82, 66);
     private static final Color BORDER_COLOR = new Color(218, 225, 233);
@@ -64,6 +68,8 @@ public class DesFrame extends JFrame {
     private final FileService fileService;
     private final CardLayout contentLayout = new CardLayout();
     private final JPanel contentPanel = new JPanel(contentLayout);
+    private final JButton workspaceButton = navigationButton("Mã hóa/Giải mã");
+    private final JButton keyInfoButton = navigationButton("Thông tin khóa");
     private final JLabel statusLabel = new JLabel("Sẵn sàng");
     private final JTextField keyField = new JTextField();
     private final JTextArea inputArea = new JTextArea();
@@ -125,14 +131,12 @@ public class DesFrame extends JFrame {
         subtitle.setForeground(TEXT_MUTED);
         subtitle.setBorder(BorderFactory.createEmptyBorder(2, 0, 26, 0));
 
-        JButton workspaceButton = navigationButton("Mã hóa/Giải mã");
-        JButton keyInfoButton = navigationButton("Thông tin khóa");
-
         workspaceButton.addActionListener(event -> showCard(WORKSPACE_CARD, "Mã hóa/Giải mã"));
         keyInfoButton.addActionListener(event -> {
             refreshKeyInfo();
             showCard(KEY_INFO_CARD, "Thông tin khóa");
         });
+        setActiveNavigation(WORKSPACE_CARD);
 
         navigation.add(title);
         navigation.add(subtitle);
@@ -146,27 +150,30 @@ public class DesFrame extends JFrame {
     private JButton navigationButton(String text) {
         JButton button = new JButton(text);
         button.setHorizontalAlignment(SwingConstants.LEFT);
-        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
         button.setBackground(PANEL_BACKGROUND);
+        button.setForeground(Color.DARK_GRAY);
         button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
         return button;
     }
 
     private JPanel buildWorkspacePanel() {
         JPanel workspace = new JPanel(new GridBagLayout());
         workspace.setBackground(PAGE_BACKGROUND);
-        workspace.setBorder(BorderFactory.createEmptyBorder(24, 24, 16, 24));
+        workspace.setBorder(BorderFactory.createEmptyBorder(24, 24, 20, 24));
 
-        addWorkspacePanel(workspace, buildSecretKeyPanel(), 0, 0, 3, 0, new Insets(0, 0, 18, 0));
-        addWorkspacePanel(workspace, buildInputPanel(), 0, 1, 1, 1, new Insets(0, 0, 0, 16));
-        addWorkspacePanel(workspace, buildActionPanel(), 1, 1, 1, 1, new Insets(0, 0, 0, 16));
-        addWorkspacePanel(workspace, buildOutputPanel(), 2, 1, 1, 1, new Insets(0, 0, 0, 0));
+        addWorkspacePanel(workspace, buildSecretKeyPanel(), 0, 0, 3, 1, 0, new Insets(0, 0, 18, 0));
+        addWorkspacePanel(workspace, buildInputPanel(), 0, 1, 1, 2, 1, new Insets(0, 0, 0, 16));
+        addWorkspacePanel(workspace, buildActionPanel(), 1, 1, 1, 1, 0.35, new Insets(0, 0, 16, 16));
+        addWorkspacePanel(workspace, buildOutputPanel(), 2, 1, 1, 1, 0.55, new Insets(0, 0, 16, 0));
+        addWorkspacePanel(workspace, buildOutputPreviewPanel(), 1, 2, 2, 1, 0.45, new Insets(0, 0, 0, 0));
         return workspace;
     }
 
     private JPanel buildSecretKeyPanel() {
-        JPanel panel = cardPanel("Khóa bí mật");
-        panel.setLayout(new BorderLayout(10, 10));
+        JPanel panel = dashboardCard("Secret Key", "DES key must be exactly 16 Hex characters.");
+        JPanel content = transparentPanel(new BorderLayout(12, 10));
 
         keyField.setToolTipText("16 ký tự Hex, tương đương 8 byte");
         keyField.setFont(Font.decode(Font.MONOSPACED));
@@ -194,14 +201,15 @@ public class DesFrame extends JFrame {
         buttons.add(saveKeyButton);
         buttons.add(clearButton);
 
-        panel.add(keyInputPanel, BorderLayout.CENTER);
-        panel.add(buttons, BorderLayout.EAST);
+        content.add(keyInputPanel, BorderLayout.CENTER);
+        content.add(buttons, BorderLayout.EAST);
+        panel.add(content, BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel buildInputPanel() {
-        JPanel panel = cardPanel("Dữ liệu vào");
-        panel.setLayout(new BorderLayout(10, 10));
+        JPanel panel = dashboardCard("Input Data", "Plaintext, Hex, or Base64 data for DES.");
+        JPanel content = transparentPanel(new BorderLayout(10, 10));
 
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         topBar.setOpaque(false);
@@ -212,8 +220,9 @@ public class DesFrame extends JFrame {
         loadButton.addActionListener(event -> loadInputFile());
         topBar.add(loadButton);
 
-        panel.add(topBar, BorderLayout.NORTH);
-        panel.add(buildTextAreaWithCounter(inputArea, inputCounterLabel), BorderLayout.CENTER);
+        content.add(topBar, BorderLayout.NORTH);
+        content.add(buildTextAreaWithCounter(inputArea, inputCounterLabel), BorderLayout.CENTER);
+        panel.add(content, BorderLayout.CENTER);
         return panel;
     }
 
@@ -227,17 +236,15 @@ public class DesFrame extends JFrame {
     }
 
     private JPanel buildActionPanel() {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setOpaque(false);
-        panel.setPreferredSize(new Dimension(150, 0));
+        JPanel panel = dashboardCard("Action", "Run DES with the selected formats.");
+        panel.setPreferredSize(new Dimension(170, 0));
 
-        JButton encryptButton = primaryButton("Mã hóa");
-        JButton decryptButton = outlineButton("Giải mã");
+        JButton encryptButton = primaryButton("Mã hóa DES");
+        JButton decryptButton = outlineButton("Giải mã DES");
         encryptButton.addActionListener(event -> encrypt());
         decryptButton.addActionListener(event -> decrypt());
 
-        JPanel actions = new JPanel();
-        actions.setOpaque(false);
+        JPanel actions = transparentPanel();
         actions.setLayout(new BoxLayout(actions, BoxLayout.Y_AXIS));
         encryptButton.setAlignmentX(CENTER_ALIGNMENT);
         decryptButton.setAlignmentX(CENTER_ALIGNMENT);
@@ -245,13 +252,13 @@ public class DesFrame extends JFrame {
         actions.add(Box.createVerticalStrut(12));
         actions.add(decryptButton);
 
-        panel.add(actions);
+        panel.add(actions, BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel buildOutputPanel() {
-        JPanel panel = cardPanel("Kết quả");
-        panel.setLayout(new BorderLayout(10, 10));
+        JPanel panel = dashboardCard("Output Data", "Ciphertext or decrypted bytes encoded as selected.");
+        JPanel content = transparentPanel(new BorderLayout(10, 10));
 
         outputArea.setEditable(false);
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
@@ -269,38 +276,17 @@ public class DesFrame extends JFrame {
         topBar.add(saveButton);
         topBar.add(useOutputAsInputButton);
 
-        panel.add(topBar, BorderLayout.NORTH);
-        panel.add(buildOutputContentPanel(), BorderLayout.CENTER);
+        content.add(topBar, BorderLayout.NORTH);
+        content.add(buildTextAreaWithCounter(outputArea, outputCounterLabel), BorderLayout.CENTER);
+        panel.add(content, BorderLayout.CENTER);
         return panel;
     }
 
-    private JPanel buildOutputContentPanel() {
-        JPanel content = new JPanel(new GridBagLayout());
-        content.setOpaque(false);
-
-        GridBagConstraints outputConstraints = new GridBagConstraints();
-        outputConstraints.gridx = 0;
-        outputConstraints.gridy = 0;
-        outputConstraints.weightx = 1;
-        outputConstraints.weighty = 1;
-        outputConstraints.fill = GridBagConstraints.BOTH;
-        outputConstraints.insets = new Insets(0, 0, 10, 0);
-        content.add(buildTextAreaWithCounter(outputArea, outputCounterLabel), outputConstraints);
-
+    private JPanel buildOutputPreviewPanel() {
+        JPanel panel = dashboardCard("Output Text Preview", "Readable plaintext appears here after successful decrypt.");
         outputPreviewArea.setEditable(false);
-        JPanel previewPanel = cardPanel("Output Text Preview");
-        previewPanel.setLayout(new BorderLayout());
-        previewPanel.add(new JScrollPane(outputPreviewArea), BorderLayout.CENTER);
-
-        GridBagConstraints previewConstraints = new GridBagConstraints();
-        previewConstraints.gridx = 0;
-        previewConstraints.gridy = 1;
-        previewConstraints.weightx = 1;
-        previewConstraints.weighty = 0.45;
-        previewConstraints.fill = GridBagConstraints.BOTH;
-        content.add(previewPanel, previewConstraints);
-
-        return content;
+        panel.add(new JScrollPane(outputPreviewArea), BorderLayout.CENTER);
+        return panel;
     }
 
     private JPanel buildKeyInfoPanel() {
@@ -308,8 +294,7 @@ public class DesFrame extends JFrame {
         panel.setBackground(PAGE_BACKGROUND);
         panel.setBorder(BorderFactory.createEmptyBorder(24, 24, 16, 24));
 
-        JPanel card = cardPanel("Thông tin khóa");
-        card.setLayout(new BorderLayout(10, 10));
+        JPanel card = dashboardCard("Thông tin khóa", "DES key schedule and round-key details.");
         keyInfoArea.setEditable(false);
         keyInfoArea.setFont(Font.decode(Font.MONOSPACED));
         keyInfoArea.setText(buildKeyInfoText());
@@ -318,50 +303,106 @@ public class DesFrame extends JFrame {
         return panel;
     }
 
-    private JPanel cardPanel(String title) {
-        JPanel panel = new JPanel();
-        panel.setBackground(PANEL_BACKGROUND);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER_COLOR),
-                BorderFactory.createCompoundBorder(
-                        BorderFactory.createTitledBorder(title),
-                        BorderFactory.createEmptyBorder(14, 14, 14, 14))));
+    private JPanel dashboardCard(String title, String description) {
+        JPanel panel = new RoundedCardPanel();
+        panel.setLayout(new BorderLayout(0, 12));
+        panel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+        panel.add(cardHeader(title, description), BorderLayout.NORTH);
         return panel;
+    }
+
+    private JPanel cardHeader(String title, String description) {
+        JPanel header = transparentPanel();
+        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 15f));
+        titleLabel.setForeground(Color.DARK_GRAY);
+        header.add(titleLabel);
+
+        if (description != null && !description.isBlank()) {
+            JLabel descriptionLabel = new JLabel(description);
+            descriptionLabel.setForeground(TEXT_MUTED);
+            descriptionLabel.setBorder(BorderFactory.createEmptyBorder(3, 0, 0, 0));
+            header.add(descriptionLabel);
+        }
+
+        return header;
+    }
+
+    private JPanel transparentPanel() {
+        JPanel panel = new JPanel();
+        panel.setOpaque(false);
+        return panel;
+    }
+
+    private JPanel transparentPanel(java.awt.LayoutManager layout) {
+        JPanel panel = new JPanel(layout);
+        panel.setOpaque(false);
+        return panel;
+    }
+
+    private static class RoundedCardPanel extends JPanel {
+        private static final int ARC = 18;
+
+        RoundedCardPanel() {
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            Graphics2D graphics2D = (Graphics2D) graphics.create();
+            graphics2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            graphics2D.setColor(PANEL_BACKGROUND);
+            graphics2D.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, ARC, ARC);
+            graphics2D.setColor(BORDER_COLOR);
+            graphics2D.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, ARC, ARC);
+            graphics2D.dispose();
+            super.paintComponent(graphics);
+        }
     }
 
     private JButton primaryButton(String text) {
         JButton button = new JButton(text);
-        button.setPreferredSize(new Dimension(128, 42));
-        button.setMaximumSize(new Dimension(128, 42));
+        button.setPreferredSize(new Dimension(140, 42));
+        button.setMaximumSize(new Dimension(140, 42));
         button.setBackground(PRIMARY_COLOR);
         button.setForeground(Color.WHITE);
         button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
         return button;
     }
 
     private JButton outlineButton(String text) {
         JButton button = new JButton(text);
-        button.setPreferredSize(new Dimension(128, 42));
-        button.setMaximumSize(new Dimension(128, 42));
+        button.setPreferredSize(new Dimension(140, 42));
+        button.setMaximumSize(new Dimension(140, 42));
         button.setBackground(PANEL_BACKGROUND);
         button.setForeground(PRIMARY_DARK);
         button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createLineBorder(PRIMARY_COLOR));
         return button;
     }
 
     private JButton neutralButton(String text) {
         JButton button = new JButton(text);
         button.setFocusPainted(false);
+        button.setBackground(new Color(248, 250, 252));
+        button.setForeground(Color.DARK_GRAY);
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR),
+                BorderFactory.createEmptyBorder(7, 10, 7, 10)));
         return button;
     }
 
-    private void addWorkspacePanel(JPanel target, JPanel panel, int x, int y, int width,
+    private void addWorkspacePanel(JPanel target, JPanel panel, int x, int y, int width, int height,
                                    double weightY, Insets insets) {
         GridBagConstraints constraints = new GridBagConstraints();
         constraints.gridx = x;
         constraints.gridy = y;
         constraints.gridwidth = width;
-        constraints.weightx = width == 1 && x == 1 ? 0 : 1;
+        constraints.gridheight = height;
+        constraints.weightx = x == 1 && width == 1 ? 0.2 : 1;
         constraints.weighty = weightY;
         constraints.fill = GridBagConstraints.BOTH;
         constraints.insets = insets;
@@ -369,12 +410,16 @@ public class DesFrame extends JFrame {
     }
 
     private JPanel buildStatusBar() {
-        JPanel statusBar = new JPanel(new BorderLayout());
-        statusBar.setBackground(PAGE_BACKGROUND);
-        statusBar.setBorder(BorderFactory.createEmptyBorder(8, 20, 12, 20));
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setOpaque(false);
+        wrapper.setBorder(BorderFactory.createEmptyBorder(0, 20, 12, 20));
+        JPanel statusBar = new RoundedCardPanel();
+        statusBar.setLayout(new BorderLayout());
+        statusBar.setBorder(BorderFactory.createEmptyBorder(9, 14, 9, 14));
         statusLabel.setForeground(Color.DARK_GRAY);
         statusBar.add(statusLabel, BorderLayout.WEST);
-        return statusBar;
+        wrapper.add(statusBar, BorderLayout.CENTER);
+        return wrapper;
     }
 
     private void configureInputs() {
@@ -872,7 +917,19 @@ public class DesFrame extends JFrame {
 
     private void showCard(String cardName, String label) {
         contentLayout.show(contentPanel, cardName);
+        setActiveNavigation(cardName);
         showStatus(label);
+    }
+
+    private void setActiveNavigation(String cardName) {
+        styleNavigationButton(workspaceButton, WORKSPACE_CARD.equals(cardName));
+        styleNavigationButton(keyInfoButton, KEY_INFO_CARD.equals(cardName));
+    }
+
+    private void styleNavigationButton(JButton button, boolean active) {
+        button.setBackground(active ? ACTIVE_NAV_BACKGROUND : PANEL_BACKGROUND);
+        button.setForeground(active ? PRIMARY_DARK : Color.DARK_GRAY);
+        button.setFont(button.getFont().deriveFont(active ? Font.BOLD : Font.PLAIN));
     }
 
     private void showStatus(String message) {
