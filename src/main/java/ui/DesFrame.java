@@ -1,8 +1,10 @@
 package ui;
 
 import des.DesService;
+import des.DesBlockTrace;
 import des.EncodingFormat;
 import des.EncodingUtils;
+import des.DesProcessResult;
 import des.InputFormat;
 import file.FileService;
 
@@ -52,6 +54,7 @@ import java.nio.charset.StandardCharsets;
 public class DesFrame extends JFrame {
     private static final String WORKSPACE_CARD = "workspace";
     private static final String KEY_INFO_CARD = "keyInfo";
+    private static final String PROCESS_CARD = "process";
 
     private static final Color PAGE_BACKGROUND = new Color(245, 247, 250);
     private static final Color PANEL_BACKGROUND = Color.WHITE;
@@ -70,17 +73,20 @@ public class DesFrame extends JFrame {
     private final JPanel contentPanel = new JPanel(contentLayout);
     private final JButton workspaceButton = navigationButton("Mã hóa/Giải mã");
     private final JButton keyInfoButton = navigationButton("Thông tin khóa");
+    private final JButton processButton = navigationButton("DES Process");
     private final JLabel statusLabel = new JLabel("Sẵn sàng");
     private final JTextField keyField = new JTextField();
     private final JTextArea inputArea = new JTextArea();
     private final JTextArea outputArea = new JTextArea();
     private final JTextArea outputPreviewArea = new JTextArea();
     private final JTextArea keyInfoArea = new JTextArea();
+    private final JTextArea processArea = new JTextArea();
     private final JLabel keyStatusLabel = new JLabel();
     private final JLabel inputCounterLabel = new JLabel();
     private final JLabel outputCounterLabel = new JLabel();
     private final JComboBox<InputFormat> inputFormatCombo = new JComboBox<>(InputFormat.values());
     private final JComboBox<EncodingFormat> outputFormatCombo = new JComboBox<>(EncodingFormat.values());
+    private DesProcessResult lastProcessResult;
 
     public DesFrame() {
         this(new DesService(), new FileService());
@@ -108,6 +114,7 @@ public class DesFrame extends JFrame {
         contentPanel.setBackground(PAGE_BACKGROUND);
         contentPanel.add(buildWorkspacePanel(), WORKSPACE_CARD);
         contentPanel.add(buildKeyInfoPanel(), KEY_INFO_CARD);
+        contentPanel.add(buildProcessPanel(), PROCESS_CARD);
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buildNavigationPanel(), contentPanel);
         splitPane.setResizeWeight(0);
@@ -136,6 +143,10 @@ public class DesFrame extends JFrame {
             refreshKeyInfo();
             showCard(KEY_INFO_CARD, "Thông tin khóa");
         });
+        processButton.addActionListener(event -> {
+            refreshProcessInfo();
+            showCard(PROCESS_CARD, "DES Process");
+        });
         setActiveNavigation(WORKSPACE_CARD);
 
         navigation.add(title);
@@ -143,6 +154,8 @@ public class DesFrame extends JFrame {
         navigation.add(workspaceButton);
         navigation.add(Box.createVerticalStrut(8));
         navigation.add(keyInfoButton);
+        navigation.add(Box.createVerticalStrut(8));
+        navigation.add(processButton);
         navigation.add(Box.createVerticalGlue());
         return navigation;
     }
@@ -299,6 +312,20 @@ public class DesFrame extends JFrame {
         keyInfoArea.setFont(Font.decode(Font.MONOSPACED));
         keyInfoArea.setText(buildKeyInfoText());
         card.add(new JScrollPane(keyInfoArea), BorderLayout.CENTER);
+        panel.add(card, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel buildProcessPanel() {
+        JPanel panel = new JPanel(new BorderLayout(12, 12));
+        panel.setBackground(PAGE_BACKGROUND);
+        panel.setBorder(BorderFactory.createEmptyBorder(24, 24, 16, 24));
+
+        JPanel card = dashboardCard("DES Process", "Latest successful DES encrypt or decrypt process.");
+        processArea.setEditable(false);
+        processArea.setFont(Font.decode(Font.MONOSPACED));
+        processArea.setText(buildProcessText());
+        card.add(new JScrollPane(processArea), BorderLayout.CENTER);
         panel.add(card, BorderLayout.CENTER);
         return panel;
     }
@@ -589,11 +616,14 @@ public class DesFrame extends JFrame {
         }
 
         try {
-            String result = desService.encrypt(
+            DesProcessResult processResult = desService.encryptWithProcess(
                     inputArea.getText(),
                     selectedInputFormat(),
                     keyField.getText(),
                     selectedOutputFormat());
+            lastProcessResult = processResult;
+            refreshProcessInfo();
+            String result = processResult.outputText();
             outputArea.setText(result);
             outputPreviewArea.setText("Ciphertext là dữ liệu đã mã hóa, không nên đọc trực tiếp như văn bản.");
             showSuccess("Mã hóa thành công. Output Text Preview đã cập nhật.");
@@ -614,11 +644,18 @@ public class DesFrame extends JFrame {
         }
 
         try {
+            DesProcessResult processResult = desService.decryptWithProcess(
+                    inputArea.getText(),
+                    selectedInputFormat(),
+                    keyField.getText(),
+                    selectedOutputFormat());
+            lastProcessResult = processResult;
+            refreshProcessInfo();
+            String result = processResult.outputText();
             byte[] plainBytes = desService.decryptToPlainBytes(
                     inputArea.getText(),
                     selectedInputFormat(),
                     keyField.getText());
-            String result = EncodingUtils.encode(plainBytes, selectedOutputFormat());
             outputArea.setText(result);
             outputPreviewArea.setText(buildPlainTextPreview(plainBytes));
             showSuccess("Giải mã thành công. Output Text Preview đã cập nhật.");
@@ -835,6 +872,40 @@ public class DesFrame extends JFrame {
         keyInfoArea.setCaretPosition(0);
     }
 
+    private void refreshProcessInfo() {
+        processArea.setText(buildProcessText());
+        processArea.setCaretPosition(0);
+    }
+
+    private String buildProcessText() {
+        if (lastProcessResult == null) {
+            return "Chưa có dữ liệu xử lý. Hãy mã hóa hoặc giải mã DES trước.";
+        }
+
+        StringBuilder builder = new StringBuilder();
+        builder.append("Chế độ: ").append(lastProcessResult.mode()).append(System.lineSeparator());
+        builder.append("Input format: ").append(lastProcessResult.inputFormat()).append(System.lineSeparator());
+        builder.append("Output format: ").append(lastProcessResult.outputFormat()).append(System.lineSeparator());
+        builder.append("Số block DES: ").append(lastProcessResult.blockCount()).append(System.lineSeparator());
+        builder.append("Kích thước trước padding: ")
+                .append(lastProcessResult.beforePaddingBytes()).append(" byte").append(System.lineSeparator());
+        builder.append("Kích thước sau padding: ")
+                .append(lastProcessResult.afterPaddingBytes()).append(" byte").append(System.lineSeparator());
+        builder.append("Output ").append(lastProcessResult.outputFormat()).append(":")
+                .append(System.lineSeparator()).append(lastProcessResult.outputText()).append(System.lineSeparator());
+
+        builder.append(System.lineSeparator());
+        builder.append(String.format("%-6s | %-18s | %-18s%n", "Block", "Input Hex", "Output Hex"));
+        builder.append("-------+--------------------+-------------------").append(System.lineSeparator());
+        for (DesBlockTrace block : lastProcessResult.blocks()) {
+            builder.append(String.format("%-6d | %-18s | %-18s%n",
+                    block.blockNumber(),
+                    block.inputHex(),
+                    block.outputHex()));
+        }
+        return builder.toString();
+    }
+
     private String buildKeyInfoText() {
         String key = normalizedKey();
         StringBuilder builder = new StringBuilder();
@@ -924,6 +995,7 @@ public class DesFrame extends JFrame {
     private void setActiveNavigation(String cardName) {
         styleNavigationButton(workspaceButton, WORKSPACE_CARD.equals(cardName));
         styleNavigationButton(keyInfoButton, KEY_INFO_CARD.equals(cardName));
+        styleNavigationButton(processButton, PROCESS_CARD.equals(cardName));
     }
 
     private void styleNavigationButton(JButton button, boolean active) {

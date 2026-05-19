@@ -1,5 +1,9 @@
 package des;
 
+import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
+import java.util.List;
+
 public class DesService {
     private final DesAlgorithm algorithm;
     private final DesKeyGenerator keyGenerator;
@@ -25,6 +29,23 @@ public class DesService {
         return EncodingUtils.encode(cipherBytes, outputFormat);
     }
 
+    public DesProcessResult encryptWithProcess(String input, InputFormat inputFormat, String hexKey,
+                                               EncodingFormat outputFormat) {
+        byte[] key = EncodingUtils.decodeDesKeyHex(normalizeKey(hexKey));
+        byte[] plainBytes = decodeInput(input, inputFormat);
+        byte[] paddedPlainBytes = PaddingUtils.applyPkcs5Padding(plainBytes);
+        BlockProcessData processData = processBlocks(paddedPlainBytes, key, false);
+        return new DesProcessResult(
+                "Encrypt",
+                inputFormat,
+                outputFormat,
+                processData.blocks().size(),
+                plainBytes.length,
+                paddedPlainBytes.length,
+                EncodingUtils.encode(processData.outputBytes(), outputFormat),
+                processData.blocks());
+    }
+
     // Chuẩn hóa bản mã từ giao diện, giải mã DES và xuất byte rõ theo định dạng đã chọn.
     public String decrypt(String input, InputFormat inputFormat, String hexKey, EncodingFormat outputFormat) {
         byte[] plainBytes = decryptToPlainBytes(input, inputFormat, hexKey);
@@ -35,6 +56,53 @@ public class DesService {
         byte[] key = EncodingUtils.decodeDesKeyHex(normalizeKey(hexKey));
         byte[] cipherBytes = decodeInput(input, inputFormat);
         return algorithm.decrypt(cipherBytes, key);
+    }
+
+    public DesProcessResult decryptWithProcess(String input, InputFormat inputFormat, String hexKey,
+                                               EncodingFormat outputFormat) {
+        byte[] key = EncodingUtils.decodeDesKeyHex(normalizeKey(hexKey));
+        byte[] cipherBytes = decodeInput(input, inputFormat);
+        BlockProcessData processData = processBlocks(cipherBytes, key, true);
+        byte[] plainBytes = PaddingUtils.removePkcs5Padding(processData.outputBytes());
+        return new DesProcessResult(
+                "Decrypt",
+                inputFormat,
+                outputFormat,
+                processData.blocks().size(),
+                plainBytes.length,
+                processData.outputBytes().length,
+                EncodingUtils.encode(plainBytes, outputFormat),
+                processData.blocks());
+    }
+
+    private BlockProcessData processBlocks(byte[] inputBytes, byte[] key, boolean decrypt) {
+        if (inputBytes.length == 0 || inputBytes.length % PaddingUtils.DES_BLOCK_SIZE != 0) {
+            throw new IllegalArgumentException("DES process data must be a non-empty multiple of 8 bytes.");
+        }
+
+        List<DesBlockTrace> blocks = new ArrayList<>();
+        ByteArrayOutputStream output = new ByteArrayOutputStream(inputBytes.length);
+        for (int offset = 0; offset < inputBytes.length; offset += PaddingUtils.DES_BLOCK_SIZE) {
+            byte[] inputBlock = sliceBlock(inputBytes, offset);
+            byte[] outputBlock = decrypt
+                    ? algorithm.decryptBlock(inputBlock, key)
+                    : algorithm.encryptBlock(inputBlock, key);
+            output.writeBytes(outputBlock);
+            blocks.add(new DesBlockTrace(
+                    blocks.size() + 1,
+                    EncodingUtils.encodeHex(inputBlock),
+                    EncodingUtils.encodeHex(outputBlock)));
+        }
+        return new BlockProcessData(output.toByteArray(), List.copyOf(blocks));
+    }
+
+    private byte[] sliceBlock(byte[] input, int offset) {
+        byte[] block = new byte[PaddingUtils.DES_BLOCK_SIZE];
+        System.arraycopy(input, offset, block, 0, PaddingUtils.DES_BLOCK_SIZE);
+        return block;
+    }
+
+    private record BlockProcessData(byte[] outputBytes, List<DesBlockTrace> blocks) {
     }
 
     // Tạo mô tả lịch sinh khóa để kiểm tra PC-1, C/D và 16 khóa vòng DES.

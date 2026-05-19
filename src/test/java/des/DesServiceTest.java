@@ -35,6 +35,53 @@ class DesServiceTest {
     }
 
     @Test
+    void capturesEncryptProcessDetailsByBlock() {
+        DesService service = new DesService();
+
+        DesProcessResult process = service.encryptWithProcess(
+                "DES",
+                InputFormat.TEXT,
+                KEY_HEX,
+                EncodingFormat.HEX);
+
+        assertEquals("Encrypt", process.mode());
+        assertEquals(InputFormat.TEXT, process.inputFormat());
+        assertEquals(EncodingFormat.HEX, process.outputFormat());
+        assertEquals(1, process.blockCount());
+        assertEquals(3, process.beforePaddingBytes());
+        assertEquals(8, process.afterPaddingBytes());
+        assertFalse(process.outputText().isBlank());
+        assertEquals(1, process.blocks().size());
+        assertEquals(1, process.blocks().get(0).blockNumber());
+        assertEquals(16, process.blocks().get(0).inputHex().length());
+        assertEquals(16, process.blocks().get(0).outputHex().length());
+    }
+
+    @Test
+    void capturesDecryptProcessDetailsByBlock() {
+        DesService service = new DesService();
+        String plainText = "DES";
+        String cipherText = service.encrypt(plainText, InputFormat.TEXT, KEY_HEX, EncodingFormat.BASE64);
+
+        DesProcessResult process = service.decryptWithProcess(
+                cipherText,
+                InputFormat.BASE64,
+                KEY_HEX,
+                EncodingFormat.HEX);
+
+        assertEquals("Decrypt", process.mode());
+        assertEquals(InputFormat.BASE64, process.inputFormat());
+        assertEquals(EncodingFormat.HEX, process.outputFormat());
+        assertEquals(1, process.blockCount());
+        assertEquals(3, process.beforePaddingBytes());
+        assertEquals(8, process.afterPaddingBytes());
+        assertEquals(EncodingUtils.encodeHex(EncodingUtils.utf8Bytes(plainText)), process.outputText());
+        assertEquals(1, process.blocks().size());
+        assertEquals(16, process.blocks().get(0).inputHex().length());
+        assertEquals(16, process.blocks().get(0).outputHex().length());
+    }
+
+    @Test
     void encryptsHexInputToHexAndDecryptsToBase64PlainBytes() {
         DesService service = new DesService();
         String plainHex = "0123456789ABCDEF";
