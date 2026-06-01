@@ -7,7 +7,6 @@ import des.EncodingUtils;
 import des.DesProcessResult;
 import des.InputFormat;
 import file.FileService;
-import ui.components.RoundedCardPanel;
 import ui.theme.AppTheme;
 
 import javax.swing.BorderFactory;
@@ -34,12 +33,12 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
@@ -59,7 +58,11 @@ import static ui.components.UiFactory.transparentPanel;
 public class DesFrame extends JFrame {
     private static final String WORKSPACE_CARD = "workspace";
     private static final String KEY_INFO_CARD = "keyInfo";
-    private static final String PROCESS_CARD = "process";
+    private static final String OUTPUT_FORMAT_BASE64 = "Base64";
+    private static final String OUTPUT_FORMAT_HEX = "Hex";
+    private static final String OUTPUT_FORMAT_TEXT = "Văn bản";
+    private static final String TEXT_OUTPUT_MESSAGE =
+            "Kết quả dạng Văn bản chỉ dùng khi giải mã từ Hex hoặc Base64.";
 
     private final DesService desService;
     private final FileService fileService;
@@ -67,19 +70,16 @@ public class DesFrame extends JFrame {
     private final JPanel contentPanel = new JPanel(contentLayout);
     private final JButton workspaceButton = navigationButton("Mã hóa/Giải mã");
     private final JButton keyInfoButton = navigationButton("Thông tin khóa");
-    private final JButton processButton = navigationButton("DES Process");
     private final JLabel statusLabel = new JLabel("Sẵn sàng");
     private final JTextField keyField = new JTextField();
     private final JTextArea inputArea = new JTextArea();
     private final JTextArea outputArea = new JTextArea();
-    private final JTextArea outputPreviewArea = new JTextArea();
     private final JTextArea keyInfoArea = new JTextArea();
     private final JTextArea processArea = new JTextArea();
     private final JLabel keyStatusLabel = new JLabel();
-    private final JLabel inputCounterLabel = new JLabel();
-    private final JLabel outputCounterLabel = new JLabel();
     private final JComboBox<InputFormat> inputFormatCombo = new JComboBox<>(InputFormat.values());
-    private final JComboBox<EncodingFormat> outputFormatCombo = new JComboBox<>(EncodingFormat.values());
+    private final JComboBox<String> outputFormatCombo = new JComboBox<>(
+            new String[]{OUTPUT_FORMAT_BASE64, OUTPUT_FORMAT_HEX, OUTPUT_FORMAT_TEXT});
     private DesProcessResult lastProcessResult;
 
     public DesFrame() {
@@ -98,7 +98,6 @@ public class DesFrame extends JFrame {
         getContentPane().setBackground(AppTheme.PAGE_BACKGROUND);
 
         add(buildBody(), BorderLayout.CENTER);
-        add(buildStatusBar(), BorderLayout.SOUTH);
 
         configureInputs();
         pack();
@@ -108,7 +107,6 @@ public class DesFrame extends JFrame {
         contentPanel.setBackground(AppTheme.PAGE_BACKGROUND);
         contentPanel.add(buildWorkspacePanel(), WORKSPACE_CARD);
         contentPanel.add(buildKeyInfoPanel(), KEY_INFO_CARD);
-        contentPanel.add(buildProcessPanel(), PROCESS_CARD);
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buildNavigationPanel(), contentPanel);
         splitPane.setResizeWeight(0);
@@ -125,31 +123,22 @@ public class DesFrame extends JFrame {
         navigation.setBorder(BorderFactory.createEmptyBorder(24, 16, 16, 16));
         navigation.setPreferredSize(new Dimension(220, 0));
 
-        JLabel title = new JLabel("DES Studio");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 24f));
-
-        JLabel subtitle = new JLabel("Bảo mật chính xác");
-        subtitle.setForeground(AppTheme.TEXT_MUTED);
-        subtitle.setBorder(BorderFactory.createEmptyBorder(2, 0, 26, 0));
+        JLabel title = new JLabel("DES");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 30f));
+        title.setForeground(AppTheme.TEXT_DARK);
+        title.setBorder(BorderFactory.createEmptyBorder(0, 0, 28, 0));
 
         workspaceButton.addActionListener(event -> showCard(WORKSPACE_CARD, "Mã hóa/Giải mã"));
         keyInfoButton.addActionListener(event -> {
             refreshKeyInfo();
             showCard(KEY_INFO_CARD, "Thông tin khóa");
         });
-        processButton.addActionListener(event -> {
-            refreshProcessInfo();
-            showCard(PROCESS_CARD, "DES Process");
-        });
         setActiveNavigation(WORKSPACE_CARD);
 
         navigation.add(title);
-        navigation.add(subtitle);
         navigation.add(workspaceButton);
         navigation.add(Box.createVerticalStrut(8));
         navigation.add(keyInfoButton);
-        navigation.add(Box.createVerticalStrut(8));
-        navigation.add(processButton);
         navigation.add(Box.createVerticalGlue());
         return navigation;
     }
@@ -158,8 +147,8 @@ public class DesFrame extends JFrame {
         JButton button = new JButton(text);
         button.setHorizontalAlignment(SwingConstants.LEFT);
         button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
-        button.setBackground(AppTheme.PANEL_BACKGROUND);
-        button.setForeground(Color.DARK_GRAY);
+        button.setBackground(AppTheme.SIDEBAR_BACKGROUND);
+        button.setForeground(AppTheme.TEXT_DARK);
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
         return button;
@@ -171,16 +160,16 @@ public class DesFrame extends JFrame {
         workspace.setBorder(BorderFactory.createEmptyBorder(24, 24, 20, 24));
 
         addWorkspacePanel(workspace, buildSecretKeyPanel(), 0, 0, 3, 1, 0, new Insets(0, 0, 18, 0));
-        addWorkspacePanel(workspace, buildInputPanel(), 0, 1, 1, 2, 1, new Insets(0, 0, 0, 16));
-        addWorkspacePanel(workspace, buildActionPanel(), 1, 1, 1, 1, 0.35, new Insets(0, 0, 16, 16));
-        addWorkspacePanel(workspace, buildOutputPanel(), 2, 1, 1, 1, 0.55, new Insets(0, 0, 16, 0));
-        addWorkspacePanel(workspace, buildOutputPreviewPanel(), 1, 2, 2, 1, 0.45, new Insets(0, 0, 0, 0));
+        addWorkspacePanel(workspace, buildInputPanel(), 0, 1, 1, 1, 0.58, new Insets(0, 0, 18, 16));
+        addWorkspacePanel(workspace, buildActionPanel(), 1, 1, 1, 1, 0.58, new Insets(0, 0, 18, 16));
+        addWorkspacePanel(workspace, buildOutputPanel(), 2, 1, 1, 1, 0.58, new Insets(0, 0, 18, 0));
+        addWorkspacePanel(workspace, buildProcessPanel(), 0, 2, 3, 1, 0.42, new Insets(0, 0, 0, 0));
         return workspace;
     }
 
     private JPanel buildSecretKeyPanel() {
-        JPanel panel = dashboardCard("Secret Key", "DES key must be exactly 16 Hex characters.");
-        JPanel content = transparentPanel(new BorderLayout(12, 10));
+        JPanel panel = dashboardCard("Khóa bí mật", null);
+        JPanel content = transparentPanel(new BorderLayout(14, 10));
 
         keyField.setToolTipText("16 ký tự Hex, tương đương 8 byte");
         keyField.setFont(Font.decode(Font.MONOSPACED));
@@ -194,14 +183,14 @@ public class DesFrame extends JFrame {
         JButton generateButton = neutralButton("Tạo ngẫu nhiên");
         JButton loadKeyButton = neutralButton("Tải khóa");
         JButton saveKeyButton = neutralButton("Lưu khóa");
-        JButton clearButton = neutralButton("Xóa dữ liệu");
+        JButton clearButton = neutralButton("Xóa khóa");
 
         generateButton.addActionListener(event -> generateRandomKey());
         loadKeyButton.addActionListener(event -> loadKeyFile());
         saveKeyButton.addActionListener(event -> saveKeyFile());
-        clearButton.addActionListener(event -> clearData());
+        clearButton.addActionListener(event -> clearKey());
 
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        JPanel buttons = new JPanel(new GridLayout(1, 4, 8, 0));
         buttons.setOpaque(false);
         buttons.add(generateButton);
         buttons.add(loadKeyButton);
@@ -209,13 +198,13 @@ public class DesFrame extends JFrame {
         buttons.add(clearButton);
 
         content.add(keyInputPanel, BorderLayout.CENTER);
-        content.add(buttons, BorderLayout.EAST);
+        content.add(buttons, BorderLayout.SOUTH);
         panel.add(content, BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel buildInputPanel() {
-        JPanel panel = dashboardCard("Input Data", "Plaintext, Hex, or Base64 data for DES.");
+        JPanel panel = dashboardCard("Đầu vào", null);
         JPanel content = transparentPanel(new BorderLayout(10, 10));
 
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
@@ -223,48 +212,57 @@ public class DesFrame extends JFrame {
         topBar.add(new JLabel("Định dạng"));
         topBar.add(inputFormatCombo);
 
-        JButton loadButton = neutralButton("Tải file");
+        JButton loadButton = neutralButton("Tải tệp");
         loadButton.addActionListener(event -> loadInputFile());
-        topBar.add(loadButton);
+        loadButton.setPreferredSize(new Dimension(0, 38));
+        loadButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
 
         content.add(topBar, BorderLayout.NORTH);
-        content.add(buildTextAreaWithCounter(inputArea, inputCounterLabel), BorderLayout.CENTER);
+        content.add(new JScrollPane(inputArea), BorderLayout.CENTER);
+        content.add(loadButton, BorderLayout.SOUTH);
         panel.add(content, BorderLayout.CENTER);
         return panel;
     }
 
-    private JPanel buildTextAreaWithCounter(JTextArea textArea, JLabel counterLabel) {
-        JPanel content = new JPanel(new BorderLayout(0, 6));
-        content.setOpaque(false);
-        counterLabel.setForeground(AppTheme.TEXT_MUTED);
-        content.add(new JScrollPane(textArea), BorderLayout.CENTER);
-        content.add(counterLabel, BorderLayout.SOUTH);
-        return content;
-    }
-
     private JPanel buildActionPanel() {
-        JPanel panel = dashboardCard("Action", "Run DES with the selected formats.");
-        panel.setPreferredSize(new Dimension(170, 0));
+        JPanel panel = dashboardCard("Thao tác", null);
+        panel.setPreferredSize(new Dimension(190, 0));
 
         JButton encryptButton = primaryButton("Mã hóa DES");
         JButton decryptButton = outlineButton("Giải mã DES");
+        JButton useOutputAsInputButton = neutralButton("Kết quả ↔ đầu vào");
+        JButton resetButton = neutralButton("Đặt lại");
         encryptButton.addActionListener(event -> encrypt());
         decryptButton.addActionListener(event -> decrypt());
+        useOutputAsInputButton.addActionListener(event -> useOutputAsInput());
+        resetButton.addActionListener(event -> resetData());
 
         JPanel actions = transparentPanel();
         actions.setLayout(new BoxLayout(actions, BoxLayout.Y_AXIS));
-        encryptButton.setAlignmentX(CENTER_ALIGNMENT);
-        decryptButton.setAlignmentX(CENTER_ALIGNMENT);
+        alignActionButton(encryptButton);
+        alignActionButton(decryptButton);
+        alignActionButton(useOutputAsInputButton);
+        alignActionButton(resetButton);
         actions.add(encryptButton);
         actions.add(Box.createVerticalStrut(12));
         actions.add(decryptButton);
+        actions.add(Box.createVerticalStrut(12));
+        actions.add(useOutputAsInputButton);
+        actions.add(Box.createVerticalStrut(12));
+        actions.add(resetButton);
+        actions.add(Box.createVerticalGlue());
 
         panel.add(actions, BorderLayout.CENTER);
         return panel;
     }
 
+    private void alignActionButton(JButton button) {
+        button.setAlignmentX(CENTER_ALIGNMENT);
+        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+    }
+
     private JPanel buildOutputPanel() {
-        JPanel panel = dashboardCard("Output Data", "Ciphertext or decrypted bytes encoded as selected.");
+        JPanel panel = dashboardCard("Kết quả", null);
         JPanel content = transparentPanel(new BorderLayout(10, 10));
 
         outputArea.setEditable(false);
@@ -274,25 +272,19 @@ public class DesFrame extends JFrame {
         topBar.add(outputFormatCombo);
 
         JButton copyButton = neutralButton("Sao chép");
-        JButton saveButton = neutralButton("Lưu file");
-        JButton useOutputAsInputButton = neutralButton("Dùng output làm input");
+        JButton saveButton = neutralButton("Lưu tệp");
         copyButton.addActionListener(event -> copyOutput());
         saveButton.addActionListener(event -> saveOutputFile());
-        useOutputAsInputButton.addActionListener(event -> useOutputAsInput());
-        topBar.add(copyButton);
-        topBar.add(saveButton);
-        topBar.add(useOutputAsInputButton);
+
+        JPanel bottomButtons = new JPanel(new GridLayout(1, 2, 8, 0));
+        bottomButtons.setOpaque(false);
+        bottomButtons.add(copyButton);
+        bottomButtons.add(saveButton);
 
         content.add(topBar, BorderLayout.NORTH);
-        content.add(buildTextAreaWithCounter(outputArea, outputCounterLabel), BorderLayout.CENTER);
+        content.add(new JScrollPane(outputArea), BorderLayout.CENTER);
+        content.add(bottomButtons, BorderLayout.SOUTH);
         panel.add(content, BorderLayout.CENTER);
-        return panel;
-    }
-
-    private JPanel buildOutputPreviewPanel() {
-        JPanel panel = dashboardCard("Output Text Preview", "Readable plaintext appears here after successful decrypt.");
-        outputPreviewArea.setEditable(false);
-        panel.add(new JScrollPane(outputPreviewArea), BorderLayout.CENTER);
         return panel;
     }
 
@@ -301,7 +293,7 @@ public class DesFrame extends JFrame {
         panel.setBackground(AppTheme.PAGE_BACKGROUND);
         panel.setBorder(BorderFactory.createEmptyBorder(24, 24, 16, 24));
 
-        JPanel card = dashboardCard("Thông tin khóa", "DES key schedule and round-key details.");
+        JPanel card = dashboardCard("Thông tin khóa", null);
         keyInfoArea.setEditable(false);
         keyInfoArea.setFont(Font.decode(Font.MONOSPACED));
         keyInfoArea.setText(buildKeyInfoText());
@@ -311,17 +303,12 @@ public class DesFrame extends JFrame {
     }
 
     private JPanel buildProcessPanel() {
-        JPanel panel = new JPanel(new BorderLayout(12, 12));
-        panel.setBackground(AppTheme.PAGE_BACKGROUND);
-        panel.setBorder(BorderFactory.createEmptyBorder(24, 24, 16, 24));
-
-        JPanel card = dashboardCard("DES Process", "Latest successful DES encrypt or decrypt process.");
+        JPanel card = dashboardCard("Quá trình DES", null);
         processArea.setEditable(false);
         processArea.setFont(Font.decode(Font.MONOSPACED));
         processArea.setText(buildProcessText());
         card.add(new JScrollPane(processArea), BorderLayout.CENTER);
-        panel.add(card, BorderLayout.CENTER);
-        return panel;
+        return card;
     }
 
     private void addWorkspacePanel(JPanel target, JPanel panel, int x, int y, int width, int height,
@@ -331,42 +318,25 @@ public class DesFrame extends JFrame {
         constraints.gridy = y;
         constraints.gridwidth = width;
         constraints.gridheight = height;
-        constraints.weightx = x == 1 && width == 1 ? 0.2 : 1;
+        constraints.weightx = x == 1 && width == 1 ? 0.35 : 1;
         constraints.weighty = weightY;
         constraints.fill = GridBagConstraints.BOTH;
         constraints.insets = insets;
         target.add(panel, constraints);
     }
 
-    private JPanel buildStatusBar() {
-        JPanel wrapper = new JPanel(new BorderLayout());
-        wrapper.setOpaque(false);
-        wrapper.setBorder(BorderFactory.createEmptyBorder(0, 20, 12, 20));
-        JPanel statusBar = new RoundedCardPanel();
-        statusBar.setLayout(new BorderLayout());
-        statusBar.setBorder(BorderFactory.createEmptyBorder(9, 14, 9, 14));
-        statusLabel.setForeground(Color.DARK_GRAY);
-        statusBar.add(statusLabel, BorderLayout.WEST);
-        wrapper.add(statusBar, BorderLayout.CENTER);
-        return wrapper;
-    }
-
     private void configureInputs() {
+        // Cập nhật giao diện theo dữ liệu đang nhập.
         ((AbstractDocument) keyField.getDocument()).setDocumentFilter(new HexKeyDocumentFilter());
-        outputFormatCombo.setSelectedItem(EncodingFormat.BASE64);
+        outputFormatCombo.setSelectedItem(OUTPUT_FORMAT_BASE64);
+        inputFormatCombo.addActionListener(event -> ensureValidOutputFormat());
+        outputFormatCombo.addActionListener(event -> ensureValidOutputFormat());
         inputArea.setLineWrap(true);
         inputArea.setWrapStyleWord(true);
         outputArea.setLineWrap(true);
         outputArea.setWrapStyleWord(true);
-        outputPreviewArea.setLineWrap(true);
-        outputPreviewArea.setWrapStyleWord(true);
+        processArea.setLineWrap(false);
         keyInfoArea.setLineWrap(false);
-        inputCounterLabel.setText(buildCounterText(inputArea.getText(), selectedInputFormat()));
-        outputCounterLabel.setText(buildCounterText(outputArea.getText(), selectedOutputFormat()));
-        inputArea.getDocument().addDocumentListener(counterListener(this::refreshInputCounter));
-        outputArea.getDocument().addDocumentListener(counterListener(this::refreshOutputCounter));
-        inputFormatCombo.addActionListener(event -> refreshInputCounter());
-        outputFormatCombo.addActionListener(event -> refreshOutputCounter());
         refreshKeyStatus();
         keyField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
@@ -427,33 +397,6 @@ public class DesFrame extends JFrame {
         }
     }
 
-    private DocumentListener counterListener(Runnable refreshAction) {
-        return new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent event) {
-                refreshAction.run();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent event) {
-                refreshAction.run();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent event) {
-                refreshAction.run();
-            }
-        };
-    }
-
-    private void refreshInputCounter() {
-        inputCounterLabel.setText(buildCounterText(inputArea.getText(), selectedInputFormat()));
-    }
-
-    private void refreshOutputCounter() {
-        outputCounterLabel.setText(buildCounterText(outputArea.getText(), selectedOutputFormat()));
-    }
-
     private void refreshKeyStatus() {
         String key = normalizedKey();
         if (key.isEmpty()) {
@@ -471,32 +414,6 @@ public class DesFrame extends JFrame {
         }
     }
 
-    private String buildCounterText(String value, InputFormat format) {
-        return buildCounterText(value, format == InputFormat.HEX);
-    }
-
-    private String buildCounterText(String value, EncodingFormat format) {
-        return buildCounterText(value, format == EncodingFormat.HEX);
-    }
-
-    private String buildCounterText(String value, boolean hexFormat) {
-        String text = value == null ? "" : value;
-        String counterText = "Ký tự: " + text.length()
-                + " | Byte UTF-8: " + text.getBytes(StandardCharsets.UTF_8).length;
-        if (!hexFormat) {
-            return counterText;
-        }
-
-        String hex = removeWhitespace(text);
-        if (hex.isEmpty()) {
-            return counterText + " | Hex: 0 ký tự = 0 byte";
-        }
-        if ((hex.length() % 2) != 0 || !isHex(hex)) {
-            return counterText + " | Hex không hợp lệ";
-        }
-        return counterText + " | Hex: " + hex.length() + " ký tự = " + (hex.length() / 2) + " byte";
-    }
-
     private void generateRandomKey() {
         try {
             keyField.setText(desService.generateRandomKeyHex());
@@ -507,6 +424,7 @@ public class DesFrame extends JFrame {
     }
 
     private void encrypt() {
+        ensureEncodedOutputForEncrypt();
         if (!validateInput("mã hóa")) {
             return;
         }
@@ -522,19 +440,19 @@ public class DesFrame extends JFrame {
                     inputArea.getText(),
                     selectedInputFormat(),
                     keyField.getText(),
-                    selectedOutputFormat());
+                    selectedEncodingOutputFormat());
             lastProcessResult = processResult;
             refreshProcessInfo();
             String result = processResult.outputText();
             outputArea.setText(result);
-            outputPreviewArea.setText("Ciphertext là dữ liệu đã mã hóa, không nên đọc trực tiếp như văn bản.");
-            showSuccess("Mã hóa thành công. Output Text Preview đã cập nhật.");
+            showSuccess("Mã hóa DES thành công.");
         } catch (RuntimeException exception) {
             showError("Mã hóa thất bại. Vui lòng kiểm tra dữ liệu đầu vào.", exception);
         }
     }
 
     private void decrypt() {
+        ensureValidOutputFormat();
         if (!validateInput("giải mã")) {
             return;
         }
@@ -550,53 +468,35 @@ public class DesFrame extends JFrame {
                     inputArea.getText(),
                     selectedInputFormat(),
                     keyField.getText(),
-                    selectedOutputFormat());
+                    isTextOutputSelected() ? EncodingFormat.BASE64 : selectedEncodingOutputFormat());
+            String result = buildDecryptOutput(processResult);
             lastProcessResult = processResult;
             refreshProcessInfo();
-            String result = processResult.outputText();
-            byte[] plainBytes = desService.decryptToPlainBytes(
-                    inputArea.getText(),
-                    selectedInputFormat(),
-                    keyField.getText());
             outputArea.setText(result);
-            outputPreviewArea.setText(buildPlainTextPreview(plainBytes));
-            showSuccess("Giải mã thành công. Output Text Preview đã cập nhật.");
+            showSuccess("Giải mã DES thành công.");
+        } catch (CharacterCodingException exception) {
+            outputArea.setText("");
+            showError("Kết quả giải mã không phải văn bản UTF-8 hợp lệ. Hãy chọn Hex hoặc Base64 để xem dữ liệu.");
         } catch (RuntimeException exception) {
             showError("Giải mã thất bại. Vui lòng kiểm tra khóa hoặc dữ liệu đầu vào.", exception);
         }
     }
 
-    private String buildPlainTextPreview(byte[] plainBytes) {
-        try {
-            String text = StandardCharsets.UTF_8
-                    .newDecoder()
-                    .onMalformedInput(CodingErrorAction.REPORT)
-                    .onUnmappableCharacter(CodingErrorAction.REPORT)
-                    .decode(ByteBuffer.wrap(plainBytes))
-                    .toString();
-            if (!isSafePreviewText(text)) {
-                return "Plaintext đã giải mã thành công nhưng chứa ký tự không phù hợp để hiển thị dạng văn bản.";
-            }
-            return text;
-        } catch (CharacterCodingException exception) {
-            return "Plaintext đã giải mã thành công nhưng không thể hiển thị an toàn dạng văn bản UTF-8.";
+    private String buildDecryptOutput(DesProcessResult processResult) throws CharacterCodingException {
+        if (!isTextOutputSelected()) {
+            return processResult.outputText();
         }
+
+        byte[] plainBytes = EncodingUtils.decodeBase64(processResult.outputText());
+        return StandardCharsets.UTF_8
+                .newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+                .decode(ByteBuffer.wrap(plainBytes))
+                .toString();
     }
 
-    private boolean isSafePreviewText(String text) {
-        for (int offset = 0; offset < text.length(); ) {
-            int codePoint = text.codePointAt(offset);
-            if (Character.isISOControl(codePoint)
-                    && codePoint != '\n'
-                    && codePoint != '\r'
-                    && codePoint != '\t') {
-                return false;
-            }
-            offset += Character.charCount(codePoint);
-        }
-        return true;
-    }
-
+    // Kiểm tra dữ liệu nhập trước khi xử lý.
     private boolean validateInput(String actionName) {
         if (inputArea.getText() == null || inputArea.getText().isBlank()) {
             showError("Vui lòng nhập dữ liệu cần " + actionName + ".");
@@ -653,11 +553,11 @@ public class DesFrame extends JFrame {
         File selectedFile = chooser.getSelectedFile();
         try {
             inputArea.setText(fileService.readSupportedFile(selectedFile.toPath()));
-            showSuccess("Đã tải file " + selectedFile.getName() + ".");
+            showSuccess("Đã tải tệp " + selectedFile.getName() + ".");
         } catch (IllegalArgumentException exception) {
             showError(exception.getMessage(), exception);
         } catch (IOException exception) {
-            showError("Không thể đọc file. Vui lòng kiểm tra lại file đã chọn.", exception);
+            showError("Không thể đọc tệp. Vui lòng kiểm tra lại tệp đã chọn.", exception);
         }
     }
 
@@ -677,15 +577,15 @@ public class DesFrame extends JFrame {
         File selectedFile = chooser.getSelectedFile();
         try {
             fileService.writeText(selectedFile.toPath(), outputArea.getText());
-            showSuccess("Đã lưu file " + selectedFile.getName() + ".");
+            showSuccess("Đã lưu tệp " + selectedFile.getName() + ".");
         } catch (IOException exception) {
-            showError("Không thể ghi file. Vui lòng chọn vị trí khác.", exception);
+            showError("Không thể ghi tệp. Vui lòng chọn vị trí khác.", exception);
         }
     }
 
     private void loadKeyFile() {
         JFileChooser chooser = new JFileChooser();
-        chooser.setFileFilter(new FileNameExtensionFilter("File khóa (*.key, *.txt)", "key", "txt"));
+        chooser.setFileFilter(new FileNameExtensionFilter("Tệp khóa (*.key, *.txt)", "key", "txt"));
         int choice = chooser.showOpenDialog(this);
         if (choice != JFileChooser.APPROVE_OPTION) {
             return;
@@ -699,7 +599,7 @@ public class DesFrame extends JFrame {
                 showSuccess("Đã tải khóa từ " + selectedFile.getName() + ".");
             }
         } catch (IOException exception) {
-            showError("Không thể đọc file khóa.", exception);
+            showError("Không thể đọc tệp khóa.", exception);
         }
     }
 
@@ -709,7 +609,7 @@ public class DesFrame extends JFrame {
         }
 
         JFileChooser chooser = new JFileChooser();
-        chooser.setFileFilter(new FileNameExtensionFilter("File khóa (*.key, *.txt)", "key", "txt"));
+        chooser.setFileFilter(new FileNameExtensionFilter("Tệp khóa (*.key, *.txt)", "key", "txt"));
         int choice = chooser.showSaveDialog(this);
         if (choice != JFileChooser.APPROVE_OPTION) {
             return;
@@ -720,7 +620,7 @@ public class DesFrame extends JFrame {
             fileService.writeText(selectedFile.toPath(), normalizedKey());
             showSuccess("Đã lưu khóa vào " + selectedFile.getName() + ".");
         } catch (IOException exception) {
-            showError("Không thể ghi file khóa. Vui lòng chọn vị trí khác.", exception);
+            showError("Không thể ghi tệp khóa. Vui lòng chọn vị trí khác.", exception);
         }
     }
 
@@ -743,16 +643,18 @@ public class DesFrame extends JFrame {
     private void useOutputAsInput() {
         String output = outputArea.getText();
         if (output == null || output.isBlank()) {
-            showStatus("Chưa có dữ liệu output để chuyển sang input.");
+            showStatus("Chưa có kết quả để chuyển sang đầu vào.");
             return;
         }
 
         inputArea.setText(output);
-        inputFormatCombo.setSelectedItem(inputFormatFor(selectedOutputFormat()));
-        outputPreviewArea.setText("");
-        refreshInputCounter();
-        refreshOutputCounter();
-        showStatus("Đã chuyển output sang input.");
+        if (isTextOutputSelected()) {
+            outputFormatCombo.setSelectedItem(OUTPUT_FORMAT_BASE64);
+            inputFormatCombo.setSelectedItem(InputFormat.TEXT);
+        } else {
+            inputFormatCombo.setSelectedItem(inputFormatFor(selectedEncodingOutputFormat()));
+        }
+        showStatus("Đã chuyển kết quả sang đầu vào.");
     }
 
     private InputFormat inputFormatFor(EncodingFormat outputFormat) {
@@ -762,11 +664,17 @@ public class DesFrame extends JFrame {
         };
     }
 
-    private void clearData() {
+    private void clearKey() {
+        keyField.setText("");
+        showStatus("Đã xóa khóa.");
+    }
+
+    private void resetData() {
         inputArea.setText("");
         outputArea.setText("");
-        outputPreviewArea.setText("");
-        showStatus("Đã xóa dữ liệu vào, kết quả và Output Text Preview.");
+        lastProcessResult = null;
+        refreshProcessInfo();
+        showStatus("Đã đặt lại đầu vào, kết quả và quá trình DES.");
     }
 
     private void refreshKeyInfo() {
@@ -786,18 +694,18 @@ public class DesFrame extends JFrame {
 
         StringBuilder builder = new StringBuilder();
         builder.append("Chế độ: ").append(lastProcessResult.mode()).append(System.lineSeparator());
-        builder.append("Input format: ").append(lastProcessResult.inputFormat()).append(System.lineSeparator());
-        builder.append("Output format: ").append(lastProcessResult.outputFormat()).append(System.lineSeparator());
-        builder.append("Số block DES: ").append(lastProcessResult.blockCount()).append(System.lineSeparator());
-        builder.append("Kích thước trước padding: ")
+        builder.append("Định dạng đầu vào: ").append(lastProcessResult.inputFormat()).append(System.lineSeparator());
+        builder.append("Định dạng kết quả: ").append(lastProcessResult.outputFormat()).append(System.lineSeparator());
+        builder.append("Số khối DES: ").append(lastProcessResult.blockCount()).append(System.lineSeparator());
+        builder.append("Kích thước trước khi đệm: ")
                 .append(lastProcessResult.beforePaddingBytes()).append(" byte").append(System.lineSeparator());
-        builder.append("Kích thước sau padding: ")
+        builder.append("Kích thước sau khi đệm: ")
                 .append(lastProcessResult.afterPaddingBytes()).append(" byte").append(System.lineSeparator());
-        builder.append("Output ").append(lastProcessResult.outputFormat()).append(":")
+        builder.append("Kết quả ").append(lastProcessResult.outputFormat()).append(":")
                 .append(System.lineSeparator()).append(lastProcessResult.outputText()).append(System.lineSeparator());
 
         builder.append(System.lineSeparator());
-        builder.append(String.format("%-6s | %-18s | %-18s%n", "Block", "Input Hex", "Output Hex"));
+        builder.append(String.format("%-6s | %-18s | %-18s%n", "Khối", "Đầu vào Hex", "Kết quả Hex"));
         builder.append("-------+--------------------+-------------------").append(System.lineSeparator());
         for (DesBlockTrace block : lastProcessResult.blocks()) {
             builder.append(String.format("%-6d | %-18s | %-18s%n",
@@ -849,13 +757,13 @@ public class DesFrame extends JFrame {
 
     private FileNameExtensionFilter loadFileFilter() {
         return new FileNameExtensionFilter(
-                "File được hỗ trợ (*.txt, *.csv, *.json, *.xml, *.docx, *.pdf)",
+                "Tệp được hỗ trợ (*.txt, *.csv, *.json, *.xml, *.docx, *.pdf)",
                 fileService.supportedLoadExtensions());
     }
 
     private FileNameExtensionFilter saveFileFilter() {
         return new FileNameExtensionFilter(
-                "File văn bản (*.txt, *.csv, *.json, *.xml)",
+                "Tệp văn bản (*.txt, *.csv, *.json, *.xml)",
                 fileService.supportedSaveExtensions());
     }
 
@@ -863,8 +771,41 @@ public class DesFrame extends JFrame {
         return (InputFormat) inputFormatCombo.getSelectedItem();
     }
 
-    private EncodingFormat selectedOutputFormat() {
-        return (EncodingFormat) outputFormatCombo.getSelectedItem();
+    private EncodingFormat selectedEncodingOutputFormat() {
+        if (OUTPUT_FORMAT_HEX.equals(outputFormatCombo.getSelectedItem())) {
+            return EncodingFormat.HEX;
+        }
+        return EncodingFormat.BASE64;
+    }
+
+    private boolean isTextOutputSelected() {
+        return OUTPUT_FORMAT_TEXT.equals(outputFormatCombo.getSelectedItem());
+    }
+
+    private boolean isTextOutputAllowed() {
+        return selectedInputFormat() != InputFormat.TEXT;
+    }
+
+    private void ensureValidOutputFormat() {
+        // Kết quả dạng Văn bản chỉ hợp lệ khi giải mã dữ liệu Hex hoặc Base64.
+        if (isTextOutputSelected() && !isTextOutputAllowed()) {
+            outputFormatCombo.setSelectedItem(OUTPUT_FORMAT_BASE64);
+            showFriendlyMessage(TEXT_OUTPUT_MESSAGE);
+        }
+    }
+
+    private void ensureEncodedOutputForEncrypt() {
+        // Bản mã luôn phải hiển thị dưới dạng Base64 hoặc Hex.
+        if (isTextOutputSelected()) {
+            outputFormatCombo.setSelectedItem(OUTPUT_FORMAT_BASE64);
+            showFriendlyMessage("Kết quả dạng Văn bản chỉ dùng khi giải mã. Đã chuyển về Base64 để mã hóa.");
+        }
+    }
+
+    // Hiển thị thông báo nhẹ trên giao diện.
+    private void showFriendlyMessage(String message) {
+        showStatus(message);
+        JOptionPane.showMessageDialog(this, message, "DES Studio", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private String normalizedKey() {
@@ -897,17 +838,17 @@ public class DesFrame extends JFrame {
     private void setActiveNavigation(String cardName) {
         styleNavigationButton(workspaceButton, WORKSPACE_CARD.equals(cardName));
         styleNavigationButton(keyInfoButton, KEY_INFO_CARD.equals(cardName));
-        styleNavigationButton(processButton, PROCESS_CARD.equals(cardName));
     }
 
     private void styleNavigationButton(JButton button, boolean active) {
-        button.setBackground(active ? AppTheme.ACTIVE_NAV_BACKGROUND : AppTheme.PANEL_BACKGROUND);
-        button.setForeground(active ? AppTheme.PRIMARY_DARK : Color.DARK_GRAY);
+        button.setBackground(active ? AppTheme.ACTIVE_NAV_BACKGROUND : AppTheme.SIDEBAR_BACKGROUND);
+        button.setForeground(active ? java.awt.Color.WHITE : AppTheme.TEXT_DARK);
         button.setFont(button.getFont().deriveFont(active ? Font.BOLD : Font.PLAIN));
     }
 
+    // Hiển thị trạng thái trên giao diện.
     private void showStatus(String message) {
-        statusLabel.setForeground(Color.DARK_GRAY);
+        statusLabel.setForeground(AppTheme.TEXT_DARK);
         statusLabel.setText(message);
     }
 
@@ -916,6 +857,7 @@ public class DesFrame extends JFrame {
         statusLabel.setText(message);
     }
 
+    // Hiển thị thông báo lỗi trên giao diện.
     private void showError(String message) {
         showError(message, null);
     }

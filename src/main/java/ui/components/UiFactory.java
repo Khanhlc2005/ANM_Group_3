@@ -3,7 +3,6 @@ package ui.components;
 import ui.theme.AppTheme;
 
 import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -21,7 +20,9 @@ public final class UiFactory {
         JPanel panel = new RoundedCardPanel();
         panel.setLayout(new BorderLayout(0, 12));
         panel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
-        panel.add(cardHeader(title, description), BorderLayout.NORTH);
+        if (title != null && !title.isBlank()) {
+            panel.add(cardHeader(title, description), BorderLayout.NORTH);
+        }
         return panel;
     }
 
@@ -52,18 +53,20 @@ public final class UiFactory {
         JButton button = new JButton(text);
         button.setPreferredSize(new Dimension(140, 42));
         button.setMaximumSize(new Dimension(140, 42));
-        button.setBackground(AppTheme.PANEL_BACKGROUND);
-        button.setForeground(AppTheme.PRIMARY_DARK);
+        button.setBackground(Color.WHITE);
+        button.setForeground(AppTheme.PRIMARY_COLOR);
         button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createLineBorder(AppTheme.PRIMARY_COLOR));
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(AppTheme.PRIMARY_COLOR),
+                BorderFactory.createEmptyBorder(9, 13, 9, 13)));
         return button;
     }
 
     public static JButton neutralButton(String text) {
         JButton button = new JButton(text);
         button.setFocusPainted(false);
-        button.setBackground(new Color(248, 250, 252));
-        button.setForeground(Color.DARK_GRAY);
+        button.setBackground(new Color(248, 251, 255));
+        button.setForeground(AppTheme.TEXT_DARK);
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(AppTheme.BORDER_COLOR),
                 BorderFactory.createEmptyBorder(7, 10, 7, 10)));
@@ -71,19 +74,20 @@ public final class UiFactory {
     }
 
     private static JPanel cardHeader(String title, String description) {
-        JPanel header = transparentPanel();
-        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+        JPanel header = transparentPanel(new BorderLayout());
 
         JLabel titleLabel = new JLabel(title);
         titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 15f));
-        titleLabel.setForeground(Color.DARK_GRAY);
-        header.add(titleLabel);
+        titleLabel.setForeground(AppTheme.TEXT_DARK);
+        titleLabel.setHorizontalAlignment(JLabel.CENTER);
+        header.add(titleLabel, BorderLayout.NORTH);
 
         if (description != null && !description.isBlank()) {
             JLabel descriptionLabel = new JLabel(description);
             descriptionLabel.setForeground(AppTheme.TEXT_MUTED);
             descriptionLabel.setBorder(BorderFactory.createEmptyBorder(3, 0, 0, 0));
-            header.add(descriptionLabel);
+            descriptionLabel.setHorizontalAlignment(JLabel.CENTER);
+            header.add(descriptionLabel, BorderLayout.CENTER);
         }
 
         return header;

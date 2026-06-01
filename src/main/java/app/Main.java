@@ -24,12 +24,12 @@ public final class Main {
         UIManager.put("FileChooser.openButtonText", "Mở");
         UIManager.put("FileChooser.saveButtonText", "Lưu");
         UIManager.put("FileChooser.cancelButtonText", "Hủy");
-        UIManager.put("FileChooser.fileNameLabelText", "Tên file:");
-        UIManager.put("FileChooser.filesOfTypeLabelText", "Loại file:");
+        UIManager.put("FileChooser.fileNameLabelText", "Tên tệp:");
+        UIManager.put("FileChooser.filesOfTypeLabelText", "Loại tệp:");
         UIManager.put("FileChooser.lookInLabelText", "Thư mục:");
         UIManager.put("FileChooser.saveInLabelText", "Lưu tại:");
-        UIManager.put("FileChooser.acceptAllFileFilterText", "Tất cả file");
-        UIManager.put("FileChooser.openDialogTitleText", "Mở file");
-        UIManager.put("FileChooser.saveDialogTitleText", "Lưu file");
+        UIManager.put("FileChooser.acceptAllFileFilterText", "Tất cả tệp");
+        UIManager.put("FileChooser.openDialogTitleText", "Mở tệp");
+        UIManager.put("FileChooser.saveDialogTitleText", "Lưu tệp");
     }
 }

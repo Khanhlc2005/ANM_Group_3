@@ -36,7 +36,7 @@ public class DesService {
         byte[] paddedPlainBytes = PaddingUtils.applyPkcs5Padding(plainBytes);
         BlockProcessData processData = processBlocks(paddedPlainBytes, key, false);
         return new DesProcessResult(
-                "Encrypt",
+                "Mã hóa",
                 inputFormat,
                 outputFormat,
                 processData.blocks().size(),
@@ -65,7 +65,7 @@ public class DesService {
         BlockProcessData processData = processBlocks(cipherBytes, key, true);
         byte[] plainBytes = PaddingUtils.removePkcs5Padding(processData.outputBytes());
         return new DesProcessResult(
-                "Decrypt",
+                "Giải mã",
                 inputFormat,
                 outputFormat,
                 processData.blocks().size(),
@@ -77,7 +77,7 @@ public class DesService {
 
     private BlockProcessData processBlocks(byte[] inputBytes, byte[] key, boolean decrypt) {
         if (inputBytes.length == 0 || inputBytes.length % PaddingUtils.DES_BLOCK_SIZE != 0) {
-            throw new IllegalArgumentException("DES process data must be a non-empty multiple of 8 bytes.");
+            throw new IllegalArgumentException("Dữ liệu xử lý DES phải là bội số khác 0 của 8 byte.");
         }
 
         List<DesBlockTrace> blocks = new ArrayList<>();
@@ -110,17 +110,17 @@ public class DesService {
         byte[] key = EncodingUtils.decodeDesKeyHex(normalizeKey(hexKey));
         KeyScheduleInfo schedule = keyGenerator.generateKeySchedule(key);
         StringBuilder builder = new StringBuilder();
-        builder.append("Key Hex: ").append(schedule.keyHex()).append(System.lineSeparator());
-        builder.append("Key Bytes: 8").append(System.lineSeparator());
-        builder.append("Key Bits: ").append(formatBinary(schedule.keyBits(), 64)).append(System.lineSeparator());
+        builder.append("Khóa Hex: ").append(schedule.keyHex()).append(System.lineSeparator());
+        builder.append("Số byte khóa: 8").append(System.lineSeparator());
+        builder.append("Bit khóa: ").append(formatBinary(schedule.keyBits(), 64)).append(System.lineSeparator());
         builder.append(System.lineSeparator());
-        builder.append("PC-1 (64 bits -> 56 bits, parity removed)").append(System.lineSeparator());
+        builder.append("PC-1 (64 bit -> 56 bit, đã bỏ bit chẵn lẻ)").append(System.lineSeparator());
         builder.append("PC-1: ").append(formatBinary(schedule.pc1Key(), 56)).append(System.lineSeparator());
         builder.append("C0:   ").append(formatBinary(schedule.c0(), 28)).append(System.lineSeparator());
         builder.append("D0:   ").append(formatBinary(schedule.d0(), 28)).append(System.lineSeparator());
         builder.append(System.lineSeparator());
-        builder.append("Round key schedule").append(System.lineSeparator());
-        builder.append("Rnd Shift Cn                           Dn                           Kn (48-bit Hex)")
+        builder.append("Lịch sinh khóa vòng").append(System.lineSeparator());
+        builder.append("Vòng Dịch  Cn                           Dn                           Kn (48-bit Hex)")
                 .append(System.lineSeparator());
         for (KeyScheduleRound round : schedule.rounds()) {
             builder.append(String.format("%02d  %-5d %-28s %-28s %012X%n",
@@ -135,10 +135,10 @@ public class DesService {
 
     private byte[] decodeInput(String input, InputFormat inputFormat) {
         if (input == null || input.isBlank()) {
-            throw new IllegalArgumentException("Input data must not be blank.");
+            throw new IllegalArgumentException("Dữ liệu đầu vào không được để trống.");
         }
         if (inputFormat == null) {
-            throw new IllegalArgumentException("Input format must be selected.");
+            throw new IllegalArgumentException("Phải chọn định dạng dữ liệu đầu vào.");
         }
 
         return switch (inputFormat) {
@@ -150,7 +150,7 @@ public class DesService {
 
     private String normalizeKey(String hexKey) {
         if (hexKey == null) {
-            throw new IllegalArgumentException("Secret key must not be blank.");
+            throw new IllegalArgumentException("Khóa bí mật không được để trống.");
         }
         return removeWhitespace(hexKey).toUpperCase();
     }

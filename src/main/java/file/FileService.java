@@ -18,6 +18,7 @@ public class FileService {
     private static final String[] TEXT_EXTENSIONS = {"txt", "csv", "json", "xml"};
     private static final String[] SAVE_EXTENSIONS = {"txt", "csv", "json", "xml"};
 
+    // Đọc dữ liệu từ tệp.
     public String readText(Path path) throws IOException {
         return Files.readString(path, StandardCharsets.UTF_8);
     }
@@ -35,9 +36,10 @@ public class FileService {
         if ("pdf".equals(extension)) {
             return readPdf(path);
         }
-        throw new IllegalArgumentException("Định dạng file chưa được hỗ trợ.");
+        throw new IllegalArgumentException("Định dạng tệp chưa được hỗ trợ.");
     }
 
+    // Ghi dữ liệu ra tệp.
     public void writeText(Path path, String content) throws IOException {
         Files.writeString(path, content == null ? "" : content, StandardCharsets.UTF_8);
     }
@@ -75,16 +77,16 @@ public class FileService {
 
     private void validateExistingReadableFile(Path path) throws IOException {
         if (path == null) {
-            throw new IOException("File không tồn tại.");
+            throw new IOException("Tệp không tồn tại.");
         }
         if (!Files.exists(path)) {
-            throw new IOException("File không tồn tại.");
+            throw new IOException("Tệp không tồn tại.");
         }
         if (!Files.isRegularFile(path) || !Files.isReadable(path)) {
-            throw new IOException("Không thể đọc file đã chọn.");
+            throw new IOException("Không thể đọc tệp đã chọn.");
         }
         if (!isSupportedFile(path)) {
-            throw new IllegalArgumentException("Định dạng file chưa được hỗ trợ.");
+            throw new IllegalArgumentException("Định dạng tệp chưa được hỗ trợ.");
         }
     }
 
@@ -103,7 +105,7 @@ public class FileService {
              XWPFWordExtractor extractor = new XWPFWordExtractor(document)) {
             return extractor.getText();
         } catch (RuntimeException exception) {
-            IOException ioException = new IOException("Không thể đọc nội dung file DOCX.", exception);
+            IOException ioException = new IOException("Không thể đọc nội dung tệp DOCX.", exception);
             throw ioException;
         }
     }
@@ -113,13 +115,13 @@ public class FileService {
             PDFTextStripper stripper = new PDFTextStripper();
             String text = stripper.getText(document);
             if (text == null || text.isBlank()) {
-                throw new IllegalArgumentException("Không tìm thấy nội dung văn bản trong file PDF.");
+                throw new IllegalArgumentException("Không tìm thấy nội dung văn bản trong tệp PDF.");
             }
             return text;
         } catch (IllegalArgumentException exception) {
             throw exception;
         } catch (RuntimeException exception) {
-            IOException ioException = new IOException("Không thể đọc nội dung file PDF.", exception);
+            IOException ioException = new IOException("Không thể đọc nội dung tệp PDF.", exception);
             throw ioException;
         }
     }

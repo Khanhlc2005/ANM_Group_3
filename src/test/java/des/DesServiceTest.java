@@ -78,7 +78,7 @@ class DesServiceTest {
                 KEY_HEX,
                 EncodingFormat.HEX);
 
-        assertEquals("Encrypt", process.mode());
+        assertEquals("Mã hóa", process.mode());
         assertEquals(InputFormat.TEXT, process.inputFormat());
         assertEquals(EncodingFormat.HEX, process.outputFormat());
         assertEquals(1, process.blockCount());
@@ -103,7 +103,7 @@ class DesServiceTest {
                 KEY_HEX,
                 EncodingFormat.HEX);
 
-        assertEquals("Decrypt", process.mode());
+        assertEquals("Giải mã", process.mode());
         assertEquals(InputFormat.BASE64, process.inputFormat());
         assertEquals(EncodingFormat.HEX, process.outputFormat());
         assertEquals(1, process.blockCount());
@@ -145,8 +145,8 @@ class DesServiceTest {
 
         String keyInfo = service.describeKey("13 34 57 79 9b bc df f1");
 
-        assertTrue(keyInfo.contains("Key Hex: 133457799BBCDFF1"));
-        assertTrue(keyInfo.contains("PC-1 (64 bits -> 56 bits, parity removed)"));
+        assertTrue(keyInfo.contains("Khóa Hex: 133457799BBCDFF1"));
+        assertTrue(keyInfo.contains("PC-1 (64 bit -> 56 bit, đã bỏ bit chẵn lẻ)"));
         assertTrue(keyInfo.contains("01  1"));
         assertTrue(keyInfo.contains("1B02EFFC7072"));
         assertTrue(keyInfo.contains("16  1"));
